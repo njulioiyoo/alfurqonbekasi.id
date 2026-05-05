@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+  alfurqon-api:
+    container_name: alfurqonv2-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.alfurqon-api.rule=Host(`alfurqonbekasi.web.local`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.alfurqon-api.entrypoints=http"
+      # Hapus prefiks `/api` sebelum ke Node — Express juga mount `/admin` & `/auth` di root + `GET /health`.
+      - "traefik.http.middlewares.alfurqon-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.alfurqon-api.middlewares=alfurqon-api-strip"
+      - "traefik.http.services.alfurqon-api.loadbalancer.server.port=3000"
+    networks:
+      - traefik-public
+      - pgsql
+    restart: unless-stopped
+
+networks:
+  traefik-public:
+    external: true
+  pgsql:
+    external: true
+    name: pgsql_postgres-network

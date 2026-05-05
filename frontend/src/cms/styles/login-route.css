@@ -1,0 +1,51 @@
+/**
+ * Login Metronic v5 mengandalkan tinggi dokumen seperti halaman HTML penuh.
+ * Tanpa ini #app tidak mengisi viewport → panel terpotong di bawah.
+ */
+html.route-login,
+body.route-login {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body.route-login {
+  min-height: 100vh;
+}
+
+body.route-login #app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.route-login .login-shell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+}
+
+body.route-login .login-shell > #kt_login {
+  flex: 1 1 auto;
+  min-height: 100vh !important;
+}
+
+body.route-login #kt_login > .kt-grid__item.kt-grid__item--fluid {
+  flex: 1 1 auto !important;
+  min-height: 100vh !important;
+  align-items: stretch !important;
+}
+
+/* Divider vertikal mengikuti tinggi layar (override height:400px tema) */
+body.route-login .kt-login.kt-login--v5 .kt-login__divider {
+  align-self: stretch;
+  align-items: stretch;
+}
+
+body.route-login .kt-login.kt-login--v5 .kt-login__divider > div {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 100%;
+}

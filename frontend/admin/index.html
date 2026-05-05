@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/metronic/assets/media/logos/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CMS Masjid Alfurqon</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.16/webfont.js"></script>
+    <script>
+      WebFont.load({
+        google: { families: ["Poppins:300,400,500,600,700", "Roboto:300,400,500,600,700"] },
+        active: function () {
+          sessionStorage.fonts = true;
+        },
+      });
+    </script>
+    <!-- jQuery/Bootstrap/Popper dimuat sekali dari AdminLayout (inject chain) — hindari dobel handler di document -->
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/cms/main.ts"></script>
+  </body>
+</html>
