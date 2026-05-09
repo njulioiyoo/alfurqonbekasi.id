@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { getJson } from "../api/http.js";
+import { getJson } from "../../api/http.js";
 
 type MeResponse = {
   ok: boolean;

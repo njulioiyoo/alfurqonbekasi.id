@@ -10,23 +10,26 @@ import {
   listUsersPaginatedFiltered,
   updateUserById,
 } from "../services/user.service.js";
+import { listAssignableRoleNames } from "../services/role.service.js";
 import { parseMetronicDatatableBody, queryGeneralSearch } from "../utils/metronic-datatable.js";
-
-/** Role yang boleh dibuat lewat CMS (akun superadmin tidak dibuat lewat API). */
-const assignableRoleSchema = z.enum(["user", "admin"]);
 
 const createUserBodySchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(8, "Password minimal 8 karakter"),
   fullName: z.string().trim().min(1).max(255).optional(),
-  role: assignableRoleSchema,
+  role: z.string().trim().min(1).max(100),
 });
 
 const patchUserBodySchema = z.object({
   fullName: z.union([z.string().trim().max(255), z.literal(""), z.null()]).optional(),
-  role: assignableRoleSchema.optional(),
+  role: z.string().trim().min(1).max(100).optional(),
   password: z.union([z.string().min(8, "Password minimal 8 karakter"), z.literal("")]).optional(),
 });
+
+async function isAssignableCmsRole(roleName: string): Promise<boolean> {
+  const allowed = await listAssignableRoleNames();
+  return allowed.includes(roleName);
+}
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -52,6 +55,16 @@ export async function createUserByAdmin(req: AuthedRequest, res: Response): Prom
   }
   const { email, password, fullName, role } = parsed.data;
   try {
+    if (!(await isAssignableCmsRole(role))) {
+      res.status(400).json({
+        ok: false,
+        error: {
+          code: "INVALID_ROLE",
+          message: "Role tidak diizinkan untuk akun CMS (cek kolom assignable_in_cms di tabel roles)",
+        },
+      });
+      return;
+    }
     const existing = await findUserByEmail(email);
     if (existing) {
       res.status(409).json({
@@ -206,6 +219,16 @@ export async function patchUserByAdmin(req: AuthedRequest, res: Response): Promi
     }
 
     const { fullName, role, password } = parsedBody.data;
+    if (role !== undefined && !(await isAssignableCmsRole(role))) {
+      res.status(400).json({
+        ok: false,
+        error: {
+          code: "INVALID_ROLE",
+          message: "Role tidak diizinkan untuk akun CMS (cek assignable_in_cms di tabel roles)",
+        },
+      });
+      return;
+    }
     const payload: { fullName?: string | null; role?: string; password?: string } = {};
     if (fullName !== undefined) payload.fullName = fullName === "" || fullName === null ? null : fullName;
     if (role !== undefined) payload.role = role;

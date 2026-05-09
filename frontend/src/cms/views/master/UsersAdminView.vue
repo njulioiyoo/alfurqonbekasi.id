@@ -4,11 +4,13 @@ import {
   createAdminUser,
   deleteAdminUser,
   getAdminUser,
+  getAssignableRoles,
   patchAdminUser,
-} from "../api/admin.js";
-import KtRemoteDatatable from "../components/KtRemoteDatatable.vue";
+} from "../../api/admin.js";
+import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "../stores/auth.js";
+import { useAuthStore } from "../../stores/auth.js";
+import { useAccessStore } from "../../stores/access.js";
 
 interface JQueryLite {
   fn?: { modal?: (...args: unknown[]) => unknown };
@@ -29,11 +31,13 @@ declare global {
 
 const auth = useAuthStore();
 const { user } = storeToRefs(auth);
-const canCreate = computed(() => user.value?.role === "superadmin");
-/** Ubah/hapus baris — sesuai route CASL read/update/delete User (admin & superadmin). */
-const canEditUsers = computed(
-  () => user.value?.role === "superadmin" || user.value?.role === "admin"
-);
+const access = useAccessStore();
+const { flags: accessFlags } = storeToRefs(access);
+
+const canCreate = computed(() => accessFlags.value.canCreateUser);
+const canUpdateUser = computed(() => accessFlags.value.canUpdateUser);
+const canDeleteUser = computed(() => accessFlags.value.canDeleteUser);
+const canEditUsers = computed(() => canUpdateUser.value || canDeleteUser.value);
 
 const userTableRef = ref<InstanceType<typeof KtRemoteDatatable> | null>(null);
 
@@ -46,14 +50,15 @@ const createError = ref("");
 const newEmail = ref("");
 const newPassword = ref("");
 const newFullName = ref("");
-const newRole = ref<"user" | "admin">("user");
+const assignableRoles = ref<string[]>(["user", "admin"]);
+const newRole = ref("user");
 
 const editSaving = ref(false);
 const editError = ref("");
 const editUserId = ref("");
 const editEmail = ref("");
 const editFullName = ref("");
-const editRole = ref<"user" | "admin" | "superadmin">("user");
+const editRole = ref("user");
 const editPassword = ref("");
 
 function jq(): Window["jQuery"] {
@@ -141,8 +146,7 @@ async function loadAndShowEditUser(id: string): Promise<void> {
     editUserId.value = d.id;
     editEmail.value = d.email;
     editFullName.value = d.fullName ?? "";
-    editRole.value =
-      d.role === "superadmin" ? "superadmin" : d.role === "admin" ? "admin" : "user";
+    editRole.value = d.role;
     editPassword.value = "";
     openEditUserModal();
   } catch {
@@ -175,12 +179,12 @@ async function onEditSubmit(): Promise<void> {
   try {
     const body: {
       fullName?: string | null;
-      role?: "user" | "admin";
+      role?: string;
       password?: string;
     } = {
       fullName: editFullName.value.trim() || null,
     };
-    if (editRole.value === "user" || editRole.value === "admin") {
+    if (editRole.value !== "superadmin" && assignableRoles.value.includes(editRole.value)) {
       body.role = editRole.value;
     }
     if (pw.length >= 8) body.password = pw;
@@ -209,14 +213,6 @@ interface DatatableUserRow {
 
 /** Kolom KTDatatable — dibangun sekali; `template` membaca store saat render baris. */
 const userColumns: unknown[] = [
-  {
-    field: "RecordID",
-    title: "#",
-    sortable: false,
-    width: 20,
-    selector: { class: "kt-checkbox--solid" },
-    textAlign: "center",
-  },
   {
     field: "email",
     title: "Email",
@@ -262,14 +258,18 @@ const userColumns: unknown[] = [
     template(row: DatatableUserRow) {
       const actor = user.value?.role;
       const lockedSuperadmin = row.role === "superadmin" && actor !== "superadmin";
-      if (lockedSuperadmin || !canEditUsers.value) {
+      if (lockedSuperadmin || (!canUpdateUser.value && !canDeleteUser.value)) {
         return '<span class="kt-font-muted kt-font-sm">—</span>';
       }
       const id = row.RecordID;
       const hideDelete = id === user.value?.id;
-      const deleteBtn = hideDelete
-        ? ""
-        : `<a href="javascript:;" class="btn btn-sm btn-clean btn-icon btn-icon-md cms-act-delete" title="Hapus" data-user-id="${id}"><i class="la la-trash"></i></a>`;
+      const deleteBtn =
+        !canDeleteUser.value || hideDelete
+          ? ""
+          : `<a href="javascript:;" class="btn btn-sm btn-clean btn-icon btn-icon-md cms-act-delete" title="Hapus" data-user-id="${id}"><i class="la la-trash"></i></a>`;
+      const editBtn = canUpdateUser.value
+        ? `<a href="javascript:;" class="btn btn-sm btn-clean btn-icon btn-icon-md cms-act-edit" title="Ubah" data-user-id="${id}"><i class="la la-edit"></i></a>`
+        : "";
       return `<div class="dropdown d-inline-block">
 							<a href="javascript:;" class="btn btn-sm btn-clean btn-icon btn-icon-md" data-toggle="dropdown"><i class="la la-cog"></i></a>
 						  	<div class="dropdown-menu dropdown-menu-right">
@@ -278,14 +278,30 @@ const userColumns: unknown[] = [
 						    	<a class="dropdown-item" href="javascript:;"><i class="la la-print"></i> Generate Report</a>
 						  	</div>
 						</div>
-						<a href="javascript:;" class="btn btn-sm btn-clean btn-icon btn-icon-md cms-act-edit" title="Ubah" data-user-id="${id}"><i class="la la-edit"></i></a>
+						${editBtn}
 						${deleteBtn}`;
     },
   },
 ];
 
+async function loadAssignableRoles(): Promise<void> {
+  try {
+    const json = await getAssignableRoles();
+    if (json.ok && json.data?.names?.length) {
+      assignableRoles.value = json.data.names;
+      if (!assignableRoles.value.includes(newRole.value)) {
+        newRole.value = assignableRoles.value[0] ?? "user";
+      }
+    }
+  } catch {
+    /* fallback assignableRoles default */
+  }
+}
+
 onMounted(() => {
   document.addEventListener("click", onUsersDatatableDocClick);
+  void access.load();
+  void loadAssignableRoles();
   void Promise.resolve().then(() => {
     requestAnimationFrame(() => {
       bindCreateUserModalHooks();
@@ -369,6 +385,7 @@ async function onCreateSubmit(): Promise<void> {
             table-id="users_datatable"
             read-path="/admin/users/datatable"
             search-placeholder="Cari email, nama, role…"
+            search-hint="Baris diambil dari database. Tabel kosong berarti belum ada pengguna yang cocok filter/pencarian (atau ada error API)."
             :columns="userColumns"
           />
         </div>
@@ -434,8 +451,7 @@ async function onCreateSubmit(): Promise<void> {
                     <label class="col-form-label col-lg-3 text-lg-right">Role</label>
                     <div class="col-lg-9">
                       <select v-model="newRole" class="form-control">
-                        <option value="user">user</option>
-                        <option value="admin">admin</option>
+                        <option v-for="r in assignableRoles" :key="r" :value="r">{{ r }}</option>
                       </select>
                     </div>
                   </div>
@@ -506,8 +522,7 @@ async function onCreateSubmit(): Promise<void> {
                         v-model="editRole"
                         class="form-control"
                       >
-                        <option value="user">user</option>
-                        <option value="admin">admin</option>
+                        <option v-for="r in assignableRoles" :key="r" :value="r">{{ r }}</option>
                       </select>
                       <div v-else class="form-control-plaintext kt-padding-l-0">
                         superadmin

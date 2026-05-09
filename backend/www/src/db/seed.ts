@@ -14,8 +14,8 @@ export async function seedSuperAdmin(): Promise<void> {
 
   const password_hash = await hashPassword(SUPERADMIN_PASSWORD);
   await pool.query(
-    `INSERT INTO users (email, password_hash, full_name, role)
-     VALUES ($1, $2, $3, $4)`,
-    [SUPERADMIN_EMAIL, password_hash, "Super Admin", "superadmin"]
+    `INSERT INTO users (email, password_hash, full_name, role_id)
+     SELECT $1, $2, $3, r.id FROM roles r WHERE r.name = 'superadmin' LIMIT 1`,
+    [SUPERADMIN_EMAIL, password_hash, "Super Admin"]
   );
 }

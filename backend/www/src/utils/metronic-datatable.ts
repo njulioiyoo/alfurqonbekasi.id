@@ -7,6 +7,8 @@ export function parseMetronicDatatableBody(body: unknown): {
   query: Record<string, unknown> | undefined;
   sortField?: string;
   sortDir?: "asc" | "desc";
+  /** Filter isi kolom `content_items.type` (opsional, untuk submenu jadwal / tipe tetap). */
+  contentType?: string;
 } {
   const b =
     body != null && typeof body === "object" && !Array.isArray(body)
@@ -33,13 +35,38 @@ export function parseMetronicDatatableBody(body: unknown): {
   let query: Record<string, unknown> | undefined;
   const q = b.query;
   if (q != null && typeof q === "object" && !Array.isArray(q)) query = q as Record<string, unknown>;
-  return { page, perpage, query, sortField, sortDir };
+  let contentType: string | undefined;
+  const ct = b.contentType;
+  if (typeof ct === "string" && ct.trim() !== "") contentType = ct.trim();
+  return { page, perpage, query, sortField, sortDir, contentType };
 }
 
+/**
+ * Nilai pencarian umum dari `query` body KTDatatable.
+ * Metronic memakai `name` input search sebagai key (`getGeneralSearchKey`); kita set `name="generalSearch"`.
+ * Legacy: key sama dengan `id` input (berakhiran `_generalSearch`) — dukung itu sebelum string lain di `query`.
+ */
 export function queryGeneralSearch(query: Record<string, unknown> | undefined): string {
   if (!query) return "";
-  const v = query.generalSearch;
-  if (typeof v === "string") return v.trim();
-  if (Array.isArray(v) && typeof v[0] === "string") return v[0].trim();
+  const read = (v: unknown): string => {
+    if (typeof v === "string") return v.trim();
+    if (Array.isArray(v) && typeof v[0] === "string") return v[0].trim();
+    return "";
+  };
+
+  const byName = read(query.generalSearch);
+  if (byName) return byName;
+
+  for (const [k, val] of Object.entries(query)) {
+    if (k.endsWith("_generalSearch")) {
+      const s = read(val);
+      if (s) return s;
+    }
+  }
+
+  for (const val of Object.values(query)) {
+    const s = read(val);
+    if (s) return s;
+  }
   return "";
 }

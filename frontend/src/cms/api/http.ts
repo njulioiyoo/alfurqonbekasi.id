@@ -48,6 +48,17 @@ export async function patchJson<T>(path: string, json: unknown): Promise<T> {
   return data;
 }
 
+export async function putJson<T>(path: string, json: unknown): Promise<T> {
+  const headers = authHeaders();
+  headers.set("Content-Type", "application/json");
+  const res = await fetch(apiUrl(path), {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(json),
+  });
+  return (await res.json()) as T;
+}
+
 export async function deleteJson<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), {
     method: "DELETE",
@@ -55,4 +66,13 @@ export async function deleteJson<T>(path: string): Promise<T> {
   });
   const data = (await res.json()) as T;
   return data;
+}
+
+export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(apiUrl(path), {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData,
+  });
+  return (await res.json()) as T;
 }

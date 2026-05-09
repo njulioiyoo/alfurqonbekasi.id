@@ -38,6 +38,9 @@ export const ADMIN_SCRIPT_CHAIN: string[] = [
   "vendors/general/block-ui/jquery.blockUI.js",
   "vendors/general/popper.js/dist/umd/popper.js",
   "vendors/general/bootstrap/dist/js/bootstrap.min.js",
+  "vendors/general/bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js",
+  "vendors/general/summernote/dist/summernote.js",
+  "vendors/general/toastr/build/toastr.min.js",
   /** Untuk dropdown ukuran halaman KTDatatable (`$('.selectpicker').selectpicker()`). */
   "vendors/general/bootstrap-select/dist/js/bootstrap-select.js",
   "vendors/general/js-cookie/src/js.cookie.js",

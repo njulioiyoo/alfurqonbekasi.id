@@ -4,8 +4,7 @@ import type { AuthedRequest } from "../middleware/auth.middleware.js";
 import { findUserByEmail, findUserById } from "../services/user.service.js";
 import { verifyPassword } from "../utils/password.js";
 import { signAccessToken } from "../utils/jwt.js";
-import { defineAbilityFor } from "../acl/abilities.js";
-import { visibleMenusForAbility } from "../acl/menu-definitions.js";
+import { visibleMenuItemsForAbility } from "../services/menu.service.js";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
@@ -117,14 +116,61 @@ export async function accessContext(req: AuthedRequest, res: Response): Promise<
     return;
   }
   try {
-    const ability = defineAbilityFor(req.user.role);
-    const menu = visibleMenusForAbility(ability);
+    if (!req.ability) {
+      res.status(500).json({
+        ok: false,
+        error: {
+          code: "ABILITY_MISSING",
+          message: "Gunakan attachAbility sebelum access-context",
+        },
+      });
+      return;
+    }
+    const menu = await visibleMenuItemsForAbility(req.ability);
     res.json({
       ok: true,
       data: {
         role: req.user.role,
-        rules: ability.rules,
+        rules: req.ability.rules,
         menu,
+        flags: {
+          canCreateContent: req.ability.can("create", "Article") || req.ability.can("manage", "all"),
+          canUpdateContent: req.ability.can("update", "Article") || req.ability.can("manage", "all"),
+          canDeleteContent: req.ability.can("delete", "Article") || req.ability.can("manage", "all"),
+          canCreatePrayerSchedule:
+            req.ability.can("create", "PrayerSchedule") || req.ability.can("manage", "all"),
+          canUpdatePrayerSchedule:
+            req.ability.can("update", "PrayerSchedule") || req.ability.can("manage", "all"),
+          canDeletePrayerSchedule:
+            req.ability.can("delete", "PrayerSchedule") || req.ability.can("manage", "all"),
+          canCreateJamaahData: req.ability.can("create", "JamaahData") || req.ability.can("manage", "all"),
+          canUpdateJamaahData: req.ability.can("update", "JamaahData") || req.ability.can("manage", "all"),
+          canDeleteJamaahData: req.ability.can("delete", "JamaahData") || req.ability.can("manage", "all"),
+          canCreateFinanceCash: req.ability.can("create", "FinanceCash") || req.ability.can("manage", "all"),
+          canUpdateFinanceCash: req.ability.can("update", "FinanceCash") || req.ability.can("manage", "all"),
+          canDeleteFinanceCash: req.ability.can("delete", "FinanceCash") || req.ability.can("manage", "all"),
+          canReadProgramSocial: req.ability.can("read", "ProgramSocial") || req.ability.can("manage", "all"),
+          canCreateProgramSocial: req.ability.can("create", "ProgramSocial") || req.ability.can("manage", "all"),
+          canUpdateProgramSocial: req.ability.can("update", "ProgramSocial") || req.ability.can("manage", "all"),
+          canDeleteProgramSocial: req.ability.can("delete", "ProgramSocial") || req.ability.can("manage", "all"),
+          canReadProgramTpq: req.ability.can("read", "ProgramTpq") || req.ability.can("manage", "all"),
+          canCreateProgramTpq: req.ability.can("create", "ProgramTpq") || req.ability.can("manage", "all"),
+          canUpdateProgramTpq: req.ability.can("update", "ProgramTpq") || req.ability.can("manage", "all"),
+          canDeleteProgramTpq: req.ability.can("delete", "ProgramTpq") || req.ability.can("manage", "all"),
+          canCreateAnnouncement: req.ability.can("create", "Announcement"),
+          canUpdateAnnouncement: req.ability.can("update", "Announcement"),
+          canDeleteAnnouncement: req.ability.can("delete", "Announcement"),
+          canCreateUser: req.ability.can("create", "User"),
+          canUpdateUser: req.ability.can("update", "User"),
+          canDeleteUser: req.ability.can("delete", "User"),
+          canCreateRole: req.ability.can("create", "Role"),
+          canUpdateRole: req.ability.can("update", "Role"),
+          canDeleteRole: req.ability.can("delete", "Role"),
+          canCreatePermission: req.ability.can("create", "Permission"),
+          canUpdatePermission: req.ability.can("update", "Permission"),
+          canDeletePermission: req.ability.can("delete", "Permission"),
+          canUpdateSetting: req.ability.can("update", "Setting"),
+        },
       },
     });
   } catch (e) {

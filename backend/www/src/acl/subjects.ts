@@ -1,4 +1,7 @@
-/** Resource CASL untuk CRUD & menu admin (diperluas seiring fitur). */
+/**
+ * Resource CASL untuk CRUD & menu admin.
+ * `(string & {})` memungkinkan subjek dari permission DB yang belum terdaftar di union (tanpa ubah kode).
+ */
 export type AppSubject =
   | "all"
   | "Dashboard"
@@ -6,10 +9,14 @@ export type AppSubject =
   | "Announcement"
   | "Donation"
   | "PrayerSchedule"
+  | "ProgramSocial"
+  | "ProgramTpq"
   | "Gallery"
   | "User"
   | "Role"
+  | "Permission"
   | "Setting"
-  | "Menu";
+  | "Menu"
+  | (string & {});
 
 export type AppActions = "manage" | "create" | "read" | "update" | "delete";

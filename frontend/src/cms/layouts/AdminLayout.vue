@@ -15,11 +15,12 @@ import {
 } from "../metronic/inject.js";
 import { metronicAsset } from "../metronic/urls.js";
 import { useAuthStore } from "../stores/auth.js";
+import { useAccessStore, menuRouteTarget } from "../stores/access.js";
+import type { MenuItem } from "../stores/access.js";
 import { ADMIN_SHELL_READY } from "../injectionKeys.js";
+import { getAdminConfig } from "../api/admin.js";
 
 const SCRIPT_ATTR_PREFIX = "admin-js";
-
-const MASTER_ROUTE_NAMES = ["master-users", "master-roles", "master-permissions", "master-config"] as const;
 
 /** Overlay sampai CSS + bundle Metronic siap — hindari “setengah render” setelah login. */
 const shellReady = ref(false);
@@ -53,6 +54,60 @@ watch(
 const auth = useAuthStore();
 const { user } = storeToRefs(auth);
 
+const access = useAccessStore();
+const { menu } = storeToRefs(access);
+
+const primaryMenuDisplay = computed((): MenuItem[] => {
+  const p = menu.value.filter((m) => m.menuGroup === "primary").sort((a, b) => a.sortOrder - b.sortOrder);
+  if (p.length > 0) return p;
+  return [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      path: "/admin/dashboard",
+      permissionName: "read:Dashboard",
+      routerName: "dashboard",
+      menuGroup: "primary",
+      sortOrder: 0,
+    },
+  ];
+});
+
+const MENU_GROUP_META: Record<string, { label: string; sort: number }> = {
+  operasional: { label: "Operasional Harian", sort: 20 },
+  jamaah: { label: "Jamaah & Layanan", sort: 30 },
+  keuangan: { label: "Keuangan & Donasi", sort: 40 },
+  program: { label: "Program & Pendidikan", sort: 50 },
+  aset: { label: "Aset & Inventaris", sort: 60 },
+  master: { label: "Master", sort: 90 },
+};
+
+type GroupMenuView = { key: string; label: string; sort: number; items: MenuItem[] };
+
+const groupedMenuDisplay = computed((): GroupMenuView[] =>
+  Object.entries(
+    menu.value
+      .filter((m) => m.menuGroup !== "primary")
+      .reduce<Record<string, MenuItem[]>>((acc, item) => {
+        const key = (item.menuGroup || "lainnya").toLowerCase();
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {})
+  )
+    .map(([key, items]) => ({
+      key,
+      label: MENU_GROUP_META[key]?.label || key,
+      sort: MENU_GROUP_META[key]?.sort ?? 999,
+      items: [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label)),
+    }))
+    .sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label))
+);
+
+function isGroupActive(g: GroupMenuView): boolean {
+  return g.items.some((m) => m.routerName === String(route.name));
+}
+
 const displayName = computed(() => {
   if (!user.value) return "";
   return user.value.fullName || user.value.email;
@@ -66,18 +121,46 @@ const userBadgeLetter = computed(() => {
 const pageTitle = computed(() => (route.meta.title as string) || "Dashboard");
 const pageDesc = computed(() => (route.meta.desc as string) || "CMS Masjid Alfurqon Bekasi");
 
-const logoSm = computed(() => metronicAsset("media/logos/logo-2-sm.png"));
-const logoDefault = computed(() => metronicAsset("media/logos/logo-2.png"));
+const branding = ref<{ logoUrl: string; logoLightUrl: string }>({
+  logoUrl: "",
+  logoLightUrl: "",
+});
+const logoVersion = ref(0);
+
+function normalizeLogoUrl(v: string): string {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.startsWith("data:") || s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/")) return s;
+  return `/${s}`;
+}
+
+async function loadBrandingConfig(): Promise<void> {
+  try {
+    const json = await getAdminConfig();
+    if (!json.ok || !json.data?.values) return;
+    branding.value.logoUrl = normalizeLogoUrl(json.data.values.logoUrl ?? "");
+    branding.value.logoLightUrl = normalizeLogoUrl(json.data.values.logoLightUrl ?? "");
+    logoVersion.value += 1;
+  } catch {
+    /* fallback pakai logo default theme */
+  }
+}
+
+function resolveLogoUrl(v: string): string {
+  if (!v) return "";
+  return `${v}${v.includes("?") ? "&" : "?"}v=${logoVersion.value}`;
+}
+
+const logoSm = computed(() =>
+  resolveLogoUrl(branding.value.logoLightUrl || branding.value.logoUrl) || metronicAsset("media/logos/logo-2-sm.png")
+);
+const logoDefault = computed(() =>
+  resolveLogoUrl(branding.value.logoUrl) || metronicAsset("media/logos/logo-2.png")
+);
 const headerBgUrl = computed(() => metronicAsset("media/misc/bg-1.jpg"));
 
 const shortDate = computed(() =>
   new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date())
-);
-
-const isDashboardActive = computed(() => route.name === "dashboard");
-
-const isMasterBranch = computed(() =>
-  MASTER_ROUTE_NAMES.includes(route.name as (typeof MASTER_ROUTE_NAMES)[number])
 );
 
 function mountMetronicCss(): void {
@@ -120,6 +203,9 @@ function waitFrames(count: number): Promise<void> {
 
 onMounted(async () => {
   document.addEventListener("click", closeUserMenuIfOutside);
+  window.addEventListener("cms-config-updated", loadBrandingConfig);
+  void access.load();
+  void loadBrandingConfig();
   shellReady.value = false;
   mountMetronicCss();
   try {
@@ -141,6 +227,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener("click", closeUserMenuIfOutside);
+  window.removeEventListener("cms-config-updated", loadBrandingConfig);
   document.body.className = "";
   unmountMetronic();
 });
@@ -322,77 +409,45 @@ function logout(): void {
               <div id="kt_header_menu_wrapper" class="kt-header-menu-wrapper">
                 <div id="kt_header_menu" class="kt-header-menu kt-header-menu-mobile">
                   <ul class="kt-menu__nav">
-                    <!-- Dashboard -->
                     <li
+                      v-for="item in primaryMenuDisplay"
+                      :key="item.id"
                       class="kt-menu__item kt-menu__item--rel"
-                      :class="{ 'kt-menu__item--active kt-menu__item--here': isDashboardActive }"
+                      :class="{ 'kt-menu__item--active kt-menu__item--here': route.name === item.routerName }"
                     >
-                      <RouterLink v-slot="{ href, navigate }" :to="{ name: 'dashboard' }" custom>
+                      <RouterLink v-slot="{ href, navigate }" :to="menuRouteTarget(item)" custom>
                         <a :href="href" class="kt-menu__link" @click="navigate">
-                          <span class="kt-menu__link-text">Dashboard</span>
+                          <span class="kt-menu__link-text">{{ item.label }}</span>
                         </a>
                       </RouterLink>
                     </li>
-                    <!-- Master — submenu classic (demo2/index.html) -->
                     <li
+                      v-for="group in groupedMenuDisplay"
+                      :key="group.key"
                       class="kt-menu__item kt-menu__item--submenu kt-menu__item--rel"
                       :class="{
-                        'kt-menu__item--active kt-menu__item--here kt-menu__item--open': isMasterBranch,
+                        'kt-menu__item--active kt-menu__item--here kt-menu__item--open': isGroupActive(group),
                       }"
                       data-ktmenu-submenu-toggle="click"
                       aria-haspopup="true"
                     >
                       <a href="javascript:;" class="kt-menu__link kt-menu__toggle">
-                        <span class="kt-menu__link-text">Master</span>
+                        <span class="kt-menu__link-text">{{ group.label }}</span>
                         <i class="kt-menu__ver-arrow la la-angle-right"></i>
                       </a>
                       <div class="kt-menu__submenu kt-menu__submenu--classic kt-menu__submenu--left">
                         <ul class="kt-menu__subnav">
                           <li
+                            v-for="item in group.items"
+                            :key="item.id"
                             class="kt-menu__item"
-                            :class="{ 'kt-menu__item--active': route.name === 'master-users' }"
+                            :class="{ 'kt-menu__item--active': route.name === item.routerName }"
                             aria-haspopup="true"
                           >
-                            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'master-users' }" custom>
+                            <RouterLink v-slot="{ href, navigate }" :to="menuRouteTarget(item)" custom>
                               <a :href="href" class="kt-menu__link" @click="navigate">
                                 <i class="kt-menu__link-bullet kt-menu__link-bullet--dot"><span></span></i>
-                                <span class="kt-menu__link-text">User</span>
-                              </a>
-                            </RouterLink>
-                          </li>
-                          <li
-                            class="kt-menu__item"
-                            :class="{ 'kt-menu__item--active': route.name === 'master-roles' }"
-                            aria-haspopup="true"
-                          >
-                            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'master-roles' }" custom>
-                              <a :href="href" class="kt-menu__link" @click="navigate">
-                                <i class="kt-menu__link-bullet kt-menu__link-bullet--dot"><span></span></i>
-                                <span class="kt-menu__link-text">Role</span>
-                              </a>
-                            </RouterLink>
-                          </li>
-                          <li
-                            class="kt-menu__item"
-                            :class="{ 'kt-menu__item--active': route.name === 'master-permissions' }"
-                            aria-haspopup="true"
-                          >
-                            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'master-permissions' }" custom>
-                              <a :href="href" class="kt-menu__link" @click="navigate">
-                                <i class="kt-menu__link-bullet kt-menu__link-bullet--dot"><span></span></i>
-                                <span class="kt-menu__link-text">Permission</span>
-                              </a>
-                            </RouterLink>
-                          </li>
-                          <li
-                            class="kt-menu__item"
-                            :class="{ 'kt-menu__item--active': route.name === 'master-config' }"
-                            aria-haspopup="true"
-                          >
-                            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'master-config' }" custom>
-                              <a :href="href" class="kt-menu__link" @click="navigate">
-                                <i class="kt-menu__link-bullet kt-menu__link-bullet--dot"><span></span></i>
-                                <span class="kt-menu__link-text">Config</span>
+                                <span class="kt-menu__link-text">{{ item.label }}</span>
                               </a>
                             </RouterLink>
                           </li>

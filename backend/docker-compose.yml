@@ -8,6 +8,9 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    # Dev: host → container (3001 menghindari bentrok dengan layanan lain di :3000).
+    ports:
+      - "127.0.0.1:3001:3000"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"

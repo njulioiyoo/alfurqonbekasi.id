@@ -13,8 +13,10 @@ export type UserRow = {
 
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
   const r = await pool.query<UserRow>(
-    `SELECT id, email, password_hash, full_name, role, created_at, updated_at
-     FROM users WHERE lower(email) = lower($1) LIMIT 1`,
+    `SELECT u.id, u.email, u.password_hash, u.full_name, r.name AS role, u.created_at, u.updated_at
+     FROM users u
+     INNER JOIN roles r ON r.id = u.role_id
+     WHERE lower(u.email) = lower($1) LIMIT 1`,
     [email]
   );
   return r.rows[0] ?? null;
@@ -22,7 +24,10 @@ export async function findUserByEmail(email: string): Promise<UserRow | null> {
 
 export async function findUserById(id: string): Promise<Omit<UserRow, "password_hash"> | null> {
   const r = await pool.query<Omit<UserRow, "password_hash"> & { password_hash?: string }>(
-    `SELECT id, email, full_name, role, created_at, updated_at FROM users WHERE id = $1 LIMIT 1`,
+    `SELECT u.id, u.email, u.full_name, r.name AS role, u.created_at, u.updated_at
+     FROM users u
+     INNER JOIN roles r ON r.id = u.role_id
+     WHERE u.id = $1 LIMIT 1`,
     [id]
   );
   const row = r.rows[0];
@@ -44,23 +49,18 @@ export async function createUser(input: {
   role?: string;
 }): Promise<Omit<UserRow, "password_hash">> {
   const password_hash = await hashPassword(input.password);
-  const role = input.role ?? "user";
-  const r = await pool.query<UserRow>(
-    `INSERT INTO users (email, password_hash, full_name, role)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, email, password_hash, full_name, role, created_at, updated_at`,
-    [input.email, password_hash, input.fullName ?? null, role]
+  const roleName = input.role ?? "user";
+  const ins = await pool.query<{ id: string }>(
+    `INSERT INTO users (email, password_hash, full_name, role_id)
+     SELECT $1, $2, $3, r.id FROM roles r WHERE r.name = $4 LIMIT 1
+     RETURNING id`,
+    [input.email, password_hash, input.fullName ?? null, roleName]
   );
-  const row = r.rows[0];
-  if (!row) throw new Error("Gagal membuat user");
-  return {
-    id: row.id,
-    email: row.email,
-    full_name: row.full_name,
-    role: row.role,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
+  const id = ins.rows[0]?.id;
+  if (!id) throw new Error("Role tidak dikenal atau gagal membuat user");
+  const user = await findUserById(id);
+  if (!user) throw new Error("Gagal memuat user baru");
+  return user;
 }
 
 export type UserListRow = {
@@ -74,13 +74,12 @@ export type UserListRow = {
 
 const MAX_PAGE_SIZE = 100;
 
-/** Kolom ORDER BY yang diizinkan (hindari SQL injection). */
 const USER_LIST_SORT: Record<string, string> = {
-  email: "email",
-  fullName: "full_name",
-  role: "role",
-  createdAt: "created_at",
-  RecordID: "created_at",
+  email: "u.email",
+  fullName: "u.full_name",
+  role: "r.name",
+  createdAt: "u.created_at",
+  RecordID: "u.created_at",
 };
 
 export async function listUsersPaginated(params: {
@@ -109,20 +108,23 @@ export async function listUsersPaginatedFiltered(params: {
 
   const search = params.search?.trim() || "";
   const hasSearch = search.length > 0;
-  const sortCol = USER_LIST_SORT[params.sortField ?? ""] ?? "created_at";
+  const sortCol = USER_LIST_SORT[params.sortField ?? ""] ?? "u.created_at";
   const sortDirSql = params.sortDir === "asc" ? "ASC" : "DESC";
 
   const whereSql = hasSearch
     ? `WHERE (
-          email ILIKE '%' || $1::text || '%'
-          OR COALESCE(full_name, '') ILIKE '%' || $1::text || '%'
-          OR COALESCE(role, '') ILIKE '%' || $1::text || '%'
+          u.email ILIKE '%' || $1::text || '%'
+          OR COALESCE(u.full_name, '') ILIKE '%' || $1::text || '%'
+          OR r.name ILIKE '%' || $1::text || '%'
         )`
     : "";
 
   const countParams: string[] = hasSearch ? [search] : [];
   const countR = await pool.query<{ total: string }>(
-    `SELECT COUNT(*)::text AS total FROM users ${whereSql}`,
+    `SELECT COUNT(*)::text AS total
+     FROM users u
+     INNER JOIN roles r ON r.id = u.role_id
+     ${whereSql}`,
     countParams
   );
   const total = Number(countR.rows[0]?.total ?? 0);
@@ -132,8 +134,9 @@ export async function listUsersPaginatedFiltered(params: {
   const offsetIdx = hasSearch ? 3 : 2;
 
   const r = await pool.query<UserListRow>(
-    `SELECT id, email, full_name, role, created_at, updated_at
-     FROM users
+    `SELECT u.id, u.email, u.full_name, r.name AS role, u.created_at, u.updated_at
+     FROM users u
+     INNER JOIN roles r ON r.id = u.role_id
      ${whereSql}
      ORDER BY ${sortCol} ${sortDirSql} NULLS LAST
      LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
@@ -155,7 +158,7 @@ export async function updateUserById(
     vals.push(input.fullName);
   }
   if (input.role !== undefined) {
-    pieces.push(`role = $${n++}`);
+    pieces.push(`role_id = (SELECT id FROM roles WHERE name = $${n++} LIMIT 1)`);
     vals.push(input.role);
   }
   if (input.password !== undefined && input.password.length > 0) {
@@ -167,13 +170,14 @@ export async function updateUserById(
   }
   pieces.push(`updated_at = NOW()`);
   vals.push(id);
-  const r = await pool.query<Omit<UserRow, "password_hash">>(
+  const r = await pool.query<{ id: string }>(
     `UPDATE users SET ${pieces.join(", ")} WHERE id = $${n}
-     RETURNING id, email, full_name, role, created_at, updated_at`,
+     RETURNING id`,
     vals
   );
-  const row = r.rows[0];
-  return row ?? null;
+  const updatedId = r.rows[0]?.id;
+  if (!updatedId) return null;
+  return findUserById(updatedId);
 }
 
 export async function deleteUserById(id: string): Promise<boolean> {
