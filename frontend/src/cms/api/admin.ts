@@ -181,7 +181,7 @@ export async function getAdminContent(id: string): Promise<ContentDetailResponse
 }
 
 export async function createAdminContent(body: {
-  type: "article" | "announcement" | "program" | "event" | "prayer_staff" | "page" | "gallery";
+  type: "program" | "event" | "prayer_staff" | "gallery";
   title: string;
   slug: string;
   excerpt?: string;
@@ -203,7 +203,7 @@ export async function createAdminContent(body: {
 export async function patchAdminContent(
   id: string,
   body: Partial<{
-    type: "article" | "announcement" | "program" | "event" | "prayer_staff" | "page" | "gallery";
+    type: "program" | "event" | "prayer_staff" | "gallery";
     title: string;
     slug: string;
     excerpt: string;
@@ -316,10 +316,12 @@ export async function postAdminAnnouncementWaBlast(
 }
 
 export async function uploadAdminImage(
-  file: File
+  file: File,
+  opts?: { context?: string }
 ): Promise<{ ok: boolean; data?: { path: string; url: string }; error?: { code: string; message: string } }> {
   const fd = new FormData();
   fd.append("file", file);
+  if (opts?.context) fd.append("context", opts.context);
   return postFormData("/admin/uploads/image", fd);
 }
 
@@ -521,6 +523,150 @@ export async function deleteAdminTpqStudent(
   return deleteJson(`/admin/program/tpq/students/${encodeURIComponent(id)}`);
 }
 
+export type QzCampaignBriefItem = { id: string; title: string; status: string };
+
+export type QzCampaignsBriefResponse = {
+  ok: boolean;
+  data?: { items: QzCampaignBriefItem[] };
+  error?: { code: string; message: string };
+};
+
+export async function getAdminQzCampaignsBrief(): Promise<QzCampaignsBriefResponse> {
+  return getJson<QzCampaignsBriefResponse>("/admin/program/qz/campaigns/brief");
+}
+
+export type QzCampaignDetailResponse = {
+  ok: boolean;
+  data?: {
+    id: string;
+    title: string;
+    seasonTag: string;
+    hijriYear: number | null;
+    dateStart: string;
+    dateEnd: string;
+    status: "draft" | "open" | "closed";
+    description: string;
+  };
+  error?: { code: string; message: string };
+};
+
+export async function getAdminQzCampaign(id: string): Promise<QzCampaignDetailResponse> {
+  return getJson<QzCampaignDetailResponse>(`/admin/program/qz/campaigns/${encodeURIComponent(id)}`);
+}
+
+export async function createAdminQzCampaign(body: {
+  title: string;
+  seasonTag?: "general" | "ramadan" | "idul_adha";
+  hijriYear?: number | null;
+  dateStart?: string;
+  dateEnd?: string;
+  status?: "draft" | "open" | "closed";
+  description?: string;
+}): Promise<{ ok: boolean; data?: { id: string }; error?: { code: string; message: string } }> {
+  return postJson("/admin/program/qz/campaigns", body);
+}
+
+export async function patchAdminQzCampaign(
+  id: string,
+  body: Partial<{
+    title: string;
+    seasonTag: "general" | "ramadan" | "idul_adha";
+    hijriYear: number | null;
+    dateStart: string;
+    dateEnd: string;
+    status: "draft" | "open" | "closed";
+    description: string;
+  }>
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return patchJson(`/admin/program/qz/campaigns/${encodeURIComponent(id)}`, body);
+}
+
+export async function deleteAdminQzCampaign(
+  id: string
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return deleteJson(`/admin/program/qz/campaigns/${encodeURIComponent(id)}`);
+}
+
+export type QzEntryKind = "qurban_adha" | "zakat_fitrah" | "zakat_mal" | "fidyah" | "other";
+export type QzPaymentStatus = "pending" | "partial" | "paid" | "refunded";
+
+export type QzEntryRow = {
+  RecordID: string;
+  donorName: string;
+  entryKind: QzEntryKind;
+  amount: number;
+  paymentStatus: QzPaymentStatus;
+  detailNote: string;
+  donorPhone: string;
+  paidAt: string;
+  financeLinked: boolean;
+  createdAt: string;
+};
+
+export type QzEntryDetailResponse = {
+  ok: boolean;
+  data?: {
+    id: string;
+    campaignId: string;
+    entryKind: QzEntryKind;
+    donorName: string;
+    donorPhone: string;
+    donorAddress: string;
+    detailNote: string;
+    amount: number;
+    paymentStatus: QzPaymentStatus;
+    paidAt: string;
+    attachmentUrl: string;
+    notes: string;
+    financeTransactionId: string;
+  };
+  error?: { code: string; message: string };
+};
+
+export async function getAdminQzEntry(id: string): Promise<QzEntryDetailResponse> {
+  return getJson<QzEntryDetailResponse>(`/admin/program/qz/entries/${encodeURIComponent(id)}`);
+}
+
+export async function createAdminQzEntry(body: {
+  campaignId: string;
+  entryKind?: QzEntryKind;
+  donorName: string;
+  donorPhone?: string;
+  donorAddress?: string;
+  detailNote?: string;
+  amount: number;
+  paymentStatus?: QzPaymentStatus;
+  paidAt?: string;
+  attachmentUrl?: string;
+  notes?: string;
+}): Promise<{ ok: boolean; data?: { id: string }; error?: { code: string; message: string } }> {
+  return postJson("/admin/program/qz/entries", body);
+}
+
+export async function patchAdminQzEntry(
+  id: string,
+  body: Partial<{
+    entryKind: QzEntryKind;
+    donorName: string;
+    donorPhone: string;
+    donorAddress: string;
+    detailNote: string;
+    amount: number;
+    paymentStatus: QzPaymentStatus;
+    paidAt: string;
+    attachmentUrl: string;
+    notes: string;
+  }>
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return patchJson(`/admin/program/qz/entries/${encodeURIComponent(id)}`, body);
+}
+
+export async function deleteAdminQzEntry(
+  id: string
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return deleteJson(`/admin/program/qz/entries/${encodeURIComponent(id)}`);
+}
+
 export type FinanceLookupResponse = {
   ok: boolean;
   data?: {
@@ -602,6 +748,33 @@ export async function deleteAdminFinanceTransaction(
   id: string
 ): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
   return deleteJson(`/admin/finance/transactions/${encodeURIComponent(id)}`);
+}
+
+export type ContactMessageDetailResponse = {
+  ok: boolean;
+  data?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    message: string;
+    status: string;
+    emailSent: boolean;
+    emailError: string;
+    createdAt: string;
+    readAt: string;
+  };
+  error?: { code: string; message: string };
+};
+
+export async function getAdminContactMessage(id: string): Promise<ContactMessageDetailResponse> {
+  return getJson<ContactMessageDetailResponse>(`/admin/contact-messages/${encodeURIComponent(id)}`);
+}
+
+export async function deleteAdminContactMessage(
+  id: string
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return deleteJson(`/admin/contact-messages/${encodeURIComponent(id)}`);
 }
 
 export type FinanceReportSummaryResponse = {

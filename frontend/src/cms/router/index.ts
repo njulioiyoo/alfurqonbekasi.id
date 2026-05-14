@@ -9,7 +9,9 @@ import ConfigAdminView from "../views/master/ConfigAdminView.vue";
 import ContentAdminView from "../views/content/ContentAdminView.vue";
 import ModulePlaceholderView from "../views/common/ModulePlaceholderView.vue";
 import TpqStudentsAdminView from "../views/program/TpqStudentsAdminView.vue";
+import QurbanZakatAdminView from "../views/program/QurbanZakatAdminView.vue";
 import AnnouncementsAdminView from "../views/announcement/AnnouncementsAdminView.vue";
+import ContactMessagesAdminView from "../views/operasional/ContactMessagesAdminView.vue";
 import JamaahDataAdminView from "../views/jamaah/JamaahDataAdminView.vue";
 import FinanceCashAdminView from "../views/finance/FinanceCashAdminView.vue";
 import FinanceReportsAdminView from "../views/finance/FinanceReportsAdminView.vue";
@@ -38,16 +40,6 @@ export const router = createRouter({
           name: "dashboard",
           component: DashboardView,
           meta: { requiresAuth: true, title: "Dashboard", desc: "Ringkasan CMS" },
-        },
-        {
-          path: "content",
-          name: "admin-content",
-          component: ContentAdminView,
-          meta: {
-            requiresAuth: true,
-            title: "Konten",
-            desc: "Konten — satu tabel dengan type",
-          },
         },
         {
           path: "master/users",
@@ -133,6 +125,32 @@ export const router = createRouter({
           },
         },
         {
+          path: "operasional/galeri",
+          name: "ops-gallery",
+          component: ContentAdminView,
+          props: {
+            fixedType: "gallery",
+            listTitle: "Galeri Kegiatan",
+            searchHintText:
+              "Foto kegiatan masjid. Upload cover image per item; status published agar tampil di website.",
+          },
+          meta: {
+            requiresAuth: true,
+            title: "Galeri Kegiatan",
+            desc: "Galeri foto kegiatan (content_items type gallery).",
+          },
+        },
+        {
+          path: "operasional/pesan-kontak",
+          name: "ops-contact-messages",
+          component: ContactMessagesAdminView,
+          meta: {
+            requiresAuth: true,
+            title: "Pesan Kontak",
+            desc: "Pesan dari form kontak website — notifikasi email via SMTP Gmail.",
+          },
+        },
+        {
           path: "operasional/broadcast",
           name: "ops-broadcast",
           component: ModulePlaceholderView,
@@ -215,8 +233,12 @@ export const router = createRouter({
         {
           path: "program/qurban-zakat",
           name: "program-qurban-zakat",
-          component: ModulePlaceholderView,
-          meta: { requiresAuth: true, title: "Qurban & Zakat Musiman", desc: "Program & Pendidikan — modul musiman." },
+          component: QurbanZakatAdminView,
+          meta: {
+            requiresAuth: true,
+            title: "Qurban & Zakat Musiman",
+            desc: "Program & Pendidikan — musim/kampanye & entri pembayaran.",
+          },
         },
         {
           path: "aset/data",

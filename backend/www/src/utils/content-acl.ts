@@ -11,9 +11,15 @@ export function isProgramSocialContentType(type: string): boolean {
   return type === "program";
 }
 
+/** Galeri kegiatan memakai `content_items.type = gallery` dengan izin `Gallery`. */
+export function isGalleryContentType(type: string): boolean {
+  return type === "gallery";
+}
+
 export function contentManagementSubject(type: string): AppSubject {
   if (isScheduleContentType(type)) return "PrayerSchedule";
   if (isProgramSocialContentType(type)) return "ProgramSocial";
+  if (isGalleryContentType(type)) return "Gallery";
   return "Article";
 }
 

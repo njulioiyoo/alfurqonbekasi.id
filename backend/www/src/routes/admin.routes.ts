@@ -7,9 +7,12 @@ import * as adminPermissionsController from "../controllers/admin-permissions.co
 import * as adminConfigController from "../controllers/admin-config.controller.js";
 import * as adminContentController from "../controllers/admin-content.controller.js";
 import * as adminAnnouncementsController from "../controllers/admin-announcements.controller.js";
+import * as adminContactMessagesController from "../controllers/admin-contact-messages.controller.js";
 import * as adminUploadController from "../controllers/admin-upload.controller.js";
 import * as adminJamaahMembersController from "../controllers/admin-jamaah-members.controller.js";
 import * as adminTpqStudentsController from "../controllers/admin-tpq-students.controller.js";
+import * as adminQzCampaignsController from "../controllers/admin-qz-campaigns.controller.js";
+import * as adminQzEntriesController from "../controllers/admin-qz-entries.controller.js";
 import * as adminFinanceController from "../controllers/admin-finance.controller.js";
 
 /**
@@ -154,6 +157,18 @@ adminRouter.post("/announcements/:id/wa-blast", authorize("update", "Announcemen
   void adminAnnouncementsController.postAnnouncementWaBlast(req, res).catch(next);
 });
 
+adminRouter.post("/contact-messages/datatable", authorize("read", "ContactMessage"), (req, res, next) => {
+  void adminContactMessagesController.listContactMessagesDatatable(req, res).catch(next);
+});
+
+adminRouter.get("/contact-messages/:id", authorize("read", "ContactMessage"), (req, res, next) => {
+  void adminContactMessagesController.getContactMessage(req, res).catch(next);
+});
+
+adminRouter.delete("/contact-messages/:id", authorize("delete", "ContactMessage"), (req, res, next) => {
+  void adminContactMessagesController.deleteContactMessageHandler(req, res).catch(next);
+});
+
 adminRouter.post("/jamaah/members/datatable", authorize("read", "JamaahData"), (req, res, next) => {
   void adminJamaahMembersController.listJamaahMembersDatatable(req, res).catch(next);
 });
@@ -192,6 +207,50 @@ adminRouter.patch("/program/tpq/students/:id", authorize("update", "ProgramTpq")
 
 adminRouter.delete("/program/tpq/students/:id", authorize("delete", "ProgramTpq"), (req, res, next) => {
   void adminTpqStudentsController.deleteTpqStudentHandler(req, res).catch(next);
+});
+
+adminRouter.get("/program/qz/campaigns/brief", authorize("read", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzCampaignsController.listQzCampaignsBriefHandler(req, res).catch(next);
+});
+
+adminRouter.post("/program/qz/campaigns/datatable", authorize("read", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzCampaignsController.listQzCampaignsDatatable(req, res).catch(next);
+});
+
+adminRouter.get("/program/qz/campaigns/:id", authorize("read", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzCampaignsController.getQzCampaign(req, res).catch(next);
+});
+
+adminRouter.post("/program/qz/campaigns", authorize("create", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzCampaignsController.postQzCampaign(req, res).catch(next);
+});
+
+adminRouter.patch("/program/qz/campaigns/:id", authorize("update", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzCampaignsController.patchQzCampaign(req, res).catch(next);
+});
+
+adminRouter.delete("/program/qz/campaigns/:id", authorize("delete", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzCampaignsController.deleteQzCampaignHandler(req, res).catch(next);
+});
+
+adminRouter.post("/program/qz/entries/datatable", authorize("read", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzEntriesController.listQzEntriesDatatable(req, res).catch(next);
+});
+
+adminRouter.get("/program/qz/entries/:id", authorize("read", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzEntriesController.getQzEntry(req, res).catch(next);
+});
+
+adminRouter.post("/program/qz/entries", authorize("create", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzEntriesController.postQzEntry(req, res).catch(next);
+});
+
+adminRouter.patch("/program/qz/entries/:id", authorize("update", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzEntriesController.patchQzEntry(req, res).catch(next);
+});
+
+adminRouter.delete("/program/qz/entries/:id", authorize("delete", "ProgramQurbanZakat"), (req, res, next) => {
+  void adminQzEntriesController.deleteQzEntryHandler(req, res).catch(next);
 });
 
 adminRouter.get("/finance/lookups", authorize("read", "FinanceCash"), (req, res, next) => {

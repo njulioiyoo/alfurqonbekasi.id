@@ -134,9 +134,6 @@ export async function accessContext(req: AuthedRequest, res: Response): Promise<
         rules: req.ability.rules,
         menu,
         flags: {
-          canCreateContent: req.ability.can("create", "Article") || req.ability.can("manage", "all"),
-          canUpdateContent: req.ability.can("update", "Article") || req.ability.can("manage", "all"),
-          canDeleteContent: req.ability.can("delete", "Article") || req.ability.can("manage", "all"),
           canCreatePrayerSchedule:
             req.ability.can("create", "PrayerSchedule") || req.ability.can("manage", "all"),
           canUpdatePrayerSchedule:
@@ -149,6 +146,12 @@ export async function accessContext(req: AuthedRequest, res: Response): Promise<
           canCreateFinanceCash: req.ability.can("create", "FinanceCash") || req.ability.can("manage", "all"),
           canUpdateFinanceCash: req.ability.can("update", "FinanceCash") || req.ability.can("manage", "all"),
           canDeleteFinanceCash: req.ability.can("delete", "FinanceCash") || req.ability.can("manage", "all"),
+          canReadGallery: req.ability.can("read", "Gallery") || req.ability.can("manage", "all"),
+          canCreateGallery: req.ability.can("create", "Gallery") || req.ability.can("manage", "all"),
+          canUpdateGallery: req.ability.can("update", "Gallery") || req.ability.can("manage", "all"),
+          canDeleteGallery: req.ability.can("delete", "Gallery") || req.ability.can("manage", "all"),
+          canReadContactMessage: req.ability.can("read", "ContactMessage") || req.ability.can("manage", "all"),
+          canDeleteContactMessage: req.ability.can("delete", "ContactMessage") || req.ability.can("manage", "all"),
           canReadProgramSocial: req.ability.can("read", "ProgramSocial") || req.ability.can("manage", "all"),
           canCreateProgramSocial: req.ability.can("create", "ProgramSocial") || req.ability.can("manage", "all"),
           canUpdateProgramSocial: req.ability.can("update", "ProgramSocial") || req.ability.can("manage", "all"),
@@ -157,6 +160,14 @@ export async function accessContext(req: AuthedRequest, res: Response): Promise<
           canCreateProgramTpq: req.ability.can("create", "ProgramTpq") || req.ability.can("manage", "all"),
           canUpdateProgramTpq: req.ability.can("update", "ProgramTpq") || req.ability.can("manage", "all"),
           canDeleteProgramTpq: req.ability.can("delete", "ProgramTpq") || req.ability.can("manage", "all"),
+          canReadProgramQurbanZakat:
+            req.ability.can("read", "ProgramQurbanZakat") || req.ability.can("manage", "all"),
+          canCreateProgramQurbanZakat:
+            req.ability.can("create", "ProgramQurbanZakat") || req.ability.can("manage", "all"),
+          canUpdateProgramQurbanZakat:
+            req.ability.can("update", "ProgramQurbanZakat") || req.ability.can("manage", "all"),
+          canDeleteProgramQurbanZakat:
+            req.ability.can("delete", "ProgramQurbanZakat") || req.ability.can("manage", "all"),
           canCreateAnnouncement: req.ability.can("create", "Announcement"),
           canUpdateAnnouncement: req.ability.can("update", "Announcement"),
           canDeleteAnnouncement: req.ability.can("delete", "Announcement"),

@@ -81,6 +81,9 @@ INSERT INTO permissions (name, guard_name) VALUES
   ('update:ProgramTpq', 'web'),
   ('delete:ProgramTpq', 'web'),
   ('read:ProgramQurbanZakat', 'web'),
+  ('create:ProgramQurbanZakat', 'web'),
+  ('update:ProgramQurbanZakat', 'web'),
+  ('delete:ProgramQurbanZakat', 'web'),
   ('read:AssetData', 'web'),
   ('read:AssetBorrows', 'web'),
   ('read:AssetMaintenance', 'web'),
@@ -113,6 +116,9 @@ INSERT INTO permissions (name, guard_name) VALUES
   ('read:Gallery', 'web'),
   ('update:Gallery', 'web'),
   ('delete:Gallery', 'web'),
+  ('read:ContactMessage', 'web'),
+  ('update:ContactMessage', 'web'),
+  ('delete:ContactMessage', 'web'),
   ('read:User', 'web'),
   ('update:User', 'web'),
   ('delete:User', 'web'),
@@ -137,7 +143,7 @@ WHERE r.name = 'admin' AND p.name IN (
   'read:FinanceZiswaf', 'read:FinanceCampaign', 'read:FinanceReport',
   'read:ProgramSocial', 'create:ProgramSocial', 'update:ProgramSocial', 'delete:ProgramSocial',
   'read:ProgramTpq', 'create:ProgramTpq', 'update:ProgramTpq', 'delete:ProgramTpq',
-  'read:ProgramQurbanZakat',
+  'read:ProgramQurbanZakat', 'create:ProgramQurbanZakat', 'update:ProgramQurbanZakat', 'delete:ProgramQurbanZakat',
   'read:AssetData', 'read:AssetBorrows', 'read:AssetMaintenance',
   'read:Role', 'update:Role',
   'read:Permission',
@@ -147,6 +153,7 @@ WHERE r.name = 'admin' AND p.name IN (
   'create:Donation', 'read:Donation', 'update:Donation', 'delete:Donation',
   'create:PrayerSchedule', 'read:PrayerSchedule', 'update:PrayerSchedule', 'delete:PrayerSchedule',
   'create:Gallery', 'read:Gallery', 'update:Gallery', 'delete:Gallery',
+  'read:ContactMessage', 'update:ContactMessage', 'delete:ContactMessage',
   'read:Menu', 'read:Setting', 'update:Setting'
 )
 ON CONFLICT DO NOTHING;
@@ -319,7 +326,49 @@ CREATE INDEX IF NOT EXISTS idx_tpq_students_full_name ON tpq_students (full_name
 CREATE INDEX IF NOT EXISTS idx_tpq_students_class_level ON tpq_students (class_level);
 CREATE INDEX IF NOT EXISTS idx_tpq_students_student_status ON tpq_students (student_status);
 
+CREATE TABLE IF NOT EXISTS qz_campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  season_tag VARCHAR(40) NOT NULL DEFAULT 'general',
+  hijri_year INT,
+  date_start DATE,
+  date_end DATE,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_qz_campaigns_status ON qz_campaigns (status);
+CREATE INDEX IF NOT EXISTS idx_qz_campaigns_date_start ON qz_campaigns (date_start);
+
+CREATE TABLE IF NOT EXISTS qz_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id UUID NOT NULL REFERENCES qz_campaigns(id) ON DELETE CASCADE,
+  entry_kind VARCHAR(40) NOT NULL DEFAULT 'other',
+  donor_name VARCHAR(255) NOT NULL,
+  donor_phone VARCHAR(40),
+  donor_address TEXT,
+  detail_note TEXT,
+  amount NUMERIC(16,2) NOT NULL DEFAULT 0,
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  paid_at DATE,
+  attachment_url TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_qz_entries_campaign_id ON qz_entries (campaign_id);
+CREATE INDEX IF NOT EXISTS idx_qz_entries_entry_kind ON qz_entries (entry_kind);
+CREATE INDEX IF NOT EXISTS idx_qz_entries_payment_status ON qz_entries (payment_status);
+CREATE INDEX IF NOT EXISTS idx_qz_entries_donor_name ON qz_entries (donor_name);
+
+ALTER TABLE qz_entries ADD COLUMN IF NOT EXISTS finance_transaction_id UUID REFERENCES finance_transactions(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_qz_entries_finance_transaction_id ON qz_entries (finance_transaction_id);
+
 INSERT INTO finance_accounts (code, name, type, is_active) VALUES
+  ('INC-QURBAN-ZAKAT', 'Pemasukan Qurban & Zakat Musiman', 'income', true),
   ('INC-INFAQ', 'Infaq Harian', 'income', true),
   ('INC-DONASI', 'Donasi Umum', 'income', true),
   ('EXP-LISTRIK', 'Biaya Listrik', 'expense', true),
@@ -364,13 +413,30 @@ CREATE TABLE IF NOT EXISTS announcements (
 CREATE INDEX IF NOT EXISTS idx_announcements_status ON announcements (status);
 CREATE INDEX IF NOT EXISTS idx_announcements_valid_from ON announcements (valid_from);
 
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(40),
+  message TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'new',
+  email_sent BOOLEAN NOT NULL DEFAULT false,
+  email_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages (status);
+CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON contact_messages (created_at);
+
 INSERT INTO admin_menu_items (slug, menu_group, label, path, icon, permission_name, router_name, sort_order)
 VALUES
   ('dashboard', 'primary', 'Dashboard', '/admin/dashboard', 'layout-dashboard', 'read:Dashboard', 'dashboard', 10),
   ('ops-announcements', 'operasional', 'Pengumuman', '/admin/operasional/pengumuman', 'notification', 'read:Announcement', 'ops-pengumuman', 10),
   ('ops-schedules', 'operasional', 'Jadwal Kegiatan/Kajian', '/admin/operasional/jadwal-kajian', 'calendar', 'read:PrayerSchedule', 'ops-schedules', 20),
   ('ops-prayer-staff', 'operasional', 'Jadwal Petugas Ibadah', '/admin/operasional/petugas-ibadah', 'users', 'read:PrayerSchedule', 'ops-prayer-staff', 30),
-  ('content', 'operasional', 'Konten', '/admin/content', 'copy', 'read:Article', 'admin-content', 40),
+  ('ops-gallery', 'operasional', 'Galeri Kegiatan', '/admin/operasional/galeri', 'image', 'read:Gallery', 'ops-gallery', 35),
+  ('ops-contact-messages', 'operasional', 'Pesan Kontak', '/admin/operasional/pesan-kontak', 'mail', 'read:ContactMessage', 'ops-contact-messages', 38),
   ('ops-broadcast', 'operasional', 'Broadcast Notifikasi', '/admin/operasional/broadcast', 'paper-plane', 'read:OpsBroadcast', 'ops-broadcast', 50),
   ('jamaah-data', 'jamaah', 'Data Jamaah', '/admin/jamaah/data', 'users', 'read:JamaahData', 'jamaah-data', 10),
   ('jamaah-event-attendance', 'jamaah', 'Pendaftaran Event & Absensi', '/admin/jamaah/event-absensi', 'clipboard', 'read:JamaahEventAttendance', 'jamaah-event-attendance', 20),
@@ -398,6 +464,8 @@ ON CONFLICT (slug) DO UPDATE SET
   permission_name = EXCLUDED.permission_name,
   router_name = EXCLUDED.router_name,
   sort_order = EXCLUDED.sort_order;
+
+DELETE FROM admin_menu_items WHERE slug = 'content';
 `;
 
 export async function runMigrations(): Promise<void> {

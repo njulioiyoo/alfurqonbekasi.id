@@ -14,9 +14,6 @@ export type MenuItem = {
 };
 
 export type AccessFlags = {
-  canCreateContent: boolean;
-  canUpdateContent: boolean;
-  canDeleteContent: boolean;
   /** Jadwal kegiatan & petugas ibadah (`content_items` type event / prayer_staff). */
   canCreatePrayerSchedule: boolean;
   canUpdatePrayerSchedule: boolean;
@@ -27,6 +24,12 @@ export type AccessFlags = {
   canCreateFinanceCash: boolean;
   canUpdateFinanceCash: boolean;
   canDeleteFinanceCash: boolean;
+  canReadGallery: boolean;
+  canCreateGallery: boolean;
+  canUpdateGallery: boolean;
+  canDeleteGallery: boolean;
+  canReadContactMessage: boolean;
+  canDeleteContactMessage: boolean;
   canReadProgramSocial: boolean;
   canCreateProgramSocial: boolean;
   canUpdateProgramSocial: boolean;
@@ -35,6 +38,10 @@ export type AccessFlags = {
   canCreateProgramTpq: boolean;
   canUpdateProgramTpq: boolean;
   canDeleteProgramTpq: boolean;
+  canReadProgramQurbanZakat: boolean;
+  canCreateProgramQurbanZakat: boolean;
+  canUpdateProgramQurbanZakat: boolean;
+  canDeleteProgramQurbanZakat: boolean;
   canCreateAnnouncement: boolean;
   canUpdateAnnouncement: boolean;
   canDeleteAnnouncement: boolean;
@@ -62,9 +69,6 @@ export type AccessContextResponse = {
 };
 
 const defaultFlags: AccessFlags = {
-  canCreateContent: false,
-  canUpdateContent: false,
-  canDeleteContent: false,
   canCreatePrayerSchedule: false,
   canUpdatePrayerSchedule: false,
   canDeletePrayerSchedule: false,
@@ -74,6 +78,12 @@ const defaultFlags: AccessFlags = {
   canCreateFinanceCash: false,
   canUpdateFinanceCash: false,
   canDeleteFinanceCash: false,
+  canReadGallery: false,
+  canCreateGallery: false,
+  canUpdateGallery: false,
+  canDeleteGallery: false,
+  canReadContactMessage: false,
+  canDeleteContactMessage: false,
   canReadProgramSocial: false,
   canCreateProgramSocial: false,
   canUpdateProgramSocial: false,
@@ -82,6 +92,10 @@ const defaultFlags: AccessFlags = {
   canCreateProgramTpq: false,
   canUpdateProgramTpq: false,
   canDeleteProgramTpq: false,
+  canReadProgramQurbanZakat: false,
+  canCreateProgramQurbanZakat: false,
+  canUpdateProgramQurbanZakat: false,
+  canDeleteProgramQurbanZakat: false,
   canCreateAnnouncement: false,
   canUpdateAnnouncement: false,
   canDeleteAnnouncement: false,

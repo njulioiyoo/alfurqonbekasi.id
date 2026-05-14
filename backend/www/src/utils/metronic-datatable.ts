@@ -9,6 +9,8 @@ export function parseMetronicDatatableBody(body: unknown): {
   sortDir?: "asc" | "desc";
   /** Filter isi kolom `content_items.type` (opsional, untuk submenu jadwal / tipe tetap). */
   contentType?: string;
+  /** Filter entri qurban/zakat per kampanye (`qz_entries.campaign_id`). */
+  campaignId?: string;
 } {
   const b =
     body != null && typeof body === "object" && !Array.isArray(body)
@@ -38,7 +40,10 @@ export function parseMetronicDatatableBody(body: unknown): {
   let contentType: string | undefined;
   const ct = b.contentType;
   if (typeof ct === "string" && ct.trim() !== "") contentType = ct.trim();
-  return { page, perpage, query, sortField, sortDir, contentType };
+  let campaignId: string | undefined;
+  const cid = b.campaignId;
+  if (typeof cid === "string" && cid.trim() !== "") campaignId = cid.trim();
+  return { page, perpage, query, sortField, sortDir, contentType, campaignId };
 }
 
 /**

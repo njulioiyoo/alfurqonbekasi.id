@@ -2,6 +2,8 @@ import express, { type Request, type Response } from "express";
 import cors from "cors";
 import { authRouter } from "./routes/auth.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
+import * as publicConfigController from "./controllers/public-config.controller.js";
+import * as publicContactController from "./controllers/public-contact.controller.js";
 import { uploadsRootDir } from "./utils/uploads-path.js";
 
 function sendHealth(_req: Request, res: Response): void {
@@ -28,6 +30,12 @@ export function createApp(): express.Application {
 
   const api = express.Router();
   api.get("/health", sendHealth);
+  api.get("/public/config", (req, res, next) => {
+    void publicConfigController.getPublicConfig(req, res).catch(next);
+  });
+  api.post("/public/contact", (req, res, next) => {
+    void publicContactController.postPublicContact(req, res).catch(next);
+  });
   api.use("/auth", authRouter);
   api.use("/admin", adminRouter);
 
@@ -39,6 +47,12 @@ export function createApp(): express.Application {
    */
   app.use("/admin", adminRouter);
   app.use("/auth", authRouter);
+  app.get("/public/config", (req, res, next) => {
+    void publicConfigController.getPublicConfig(req, res).catch(next);
+  });
+  app.post("/public/contact", (req, res, next) => {
+    void publicContactController.postPublicContact(req, res).catch(next);
+  });
 
   app.use(
     (

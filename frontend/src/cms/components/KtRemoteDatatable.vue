@@ -217,17 +217,31 @@ function reload(): void {
   ($(el) as JQueryLite).KTDatatable("reload");
 }
 
-watch(adminShellReady, (ready) => {
-  if (ready) scheduleMount();
-});
-
-onMounted(() => {
+/** Merge statis + dinamis (mis. `campaignId`) — daftar ulang ke map body AJAX tiap perubahan. */
+function syncMergeExtras(): void {
   unregisterExtras?.();
   unregisterExtras = null;
   const ex = props.mergeRequestBody;
   if (ex && Object.keys(ex).length > 0) {
-    unregisterExtras = registerKtdatatableBodyExtra(props.readPath, ex);
+    unregisterExtras = registerKtdatatableBodyExtra(props.readPath, { ...ex });
   }
+}
+
+watch(adminShellReady, (ready) => {
+  if (ready) scheduleMount();
+});
+
+watch(
+  () => props.mergeRequestBody,
+  () => {
+    syncMergeExtras();
+    if (ktInitialized) reload();
+  },
+  { deep: true }
+);
+
+onMounted(() => {
+  syncMergeExtras();
   scheduleMount();
 });
 

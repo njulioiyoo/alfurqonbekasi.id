@@ -9,6 +9,7 @@ import {
   updateContent,
 } from "../services/content.service.js";
 import { canManageContentType } from "../utils/content-acl.js";
+import { validateGalleryCoverUrl } from "../utils/gallery-image.js";
 import { parseMetronicDatatableBody, queryGeneralSearch } from "../utils/metronic-datatable.js";
 
 const contentTypeSchema = z.enum([
@@ -40,7 +41,7 @@ function mapAttr(v: string | null | undefined): string | null {
 }
 
 function isLightweightType(t: string): boolean {
-  return t === "event" || t === "prayer_staff";
+  return t === "event" || t === "prayer_staff" || t === "gallery";
 }
 
 const contentCreateSchema = z
@@ -265,6 +266,13 @@ export async function postContent(req: AuthedRequest, res: Response): Promise<vo
   }
   try {
     const p = parsed.data;
+    if (p.type === "gallery") {
+      const galleryErr = await validateGalleryCoverUrl(p.coverImageUrl?.trim() ?? "");
+      if (galleryErr) {
+        res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: galleryErr } });
+        return;
+      }
+    }
     const created = await createContent({
       type: p.type,
       title: p.title,
@@ -331,6 +339,19 @@ export async function patchContent(req: AuthedRequest, res: Response): Promise<v
       return;
     }
     const p = parsed.data;
+    if (toType === "gallery") {
+      const cover =
+        p.coverImageUrl !== undefined
+          ? p.coverImageUrl === ""
+            ? ""
+            : String(p.coverImageUrl).trim()
+          : (existing.cover_image_url ?? "");
+      const galleryErr = await validateGalleryCoverUrl(cover);
+      if (galleryErr) {
+        res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: galleryErr } });
+        return;
+      }
+    }
     const patch: Parameters<typeof updateContent>[1] = {
       type: p.type,
       title: p.title,

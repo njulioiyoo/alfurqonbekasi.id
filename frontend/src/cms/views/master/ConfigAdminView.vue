@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { getAdminConfig, putAdminConfig, uploadAdminImage } from "../../api/admin.js";
 import { useAccessStore } from "../../stores/access.js";
 
-type ConfigTab = "website" | "branding" | "seo" | "social" | "integrations" | "advanced";
+interface JQueryLite {
+  fn?: {
+    summernote?: (...args: unknown[]) => unknown;
+  };
+  summernote?: (...args: unknown[]) => unknown;
+}
+
+function jq(): Window["jQuery"] {
+  return window.jQuery;
+}
+
+type ConfigTab = "website" | "branding" | "visimisi" | "seo" | "social" | "integrations" | "advanced";
 
 const activeTab = ref<ConfigTab>("website");
 const saving = ref(false);
@@ -21,6 +32,10 @@ const form = ref({
   websiteUrl: "https://alfurqonbekasi.or.id",
   adminEmail: "admin@alfurqonbekasi.or.id",
   adminPhone: "+62 812-0000-0000",
+  address: "",
+  city: "",
+  province: "",
+  postalCode: "",
   timezone: "Asia/Jakarta",
   locale: "id-ID",
   titleTemplate: "%PAGE_TITLE% | %SITE_NAME%",
@@ -47,6 +62,15 @@ const form = ref({
   gtmContainerId: "",
   recaptchaSiteKey: "",
   mapsEmbedUrl: "",
+  islamicDaysUrl: "https://www.islamicfinder.org/specialislamicdays/",
+  smtpHost: "smtp.gmail.com",
+  smtpPort: "587",
+  smtpUser: "",
+  smtpPass: "",
+  smtpFrom: "",
+  contactNotifyEmail: "",
+  visi: "",
+  misi: "",
   maintenanceMode: false,
   allowPublicRegistration: false,
   cacheTtlSeconds: 300,
@@ -56,6 +80,7 @@ const form = ref({
 const tabs: { id: ConfigTab; label: string; icon: string }[] = [
   { id: "website", label: "Website", icon: "flaticon2-architecture-and-city" },
   { id: "branding", label: "Branding", icon: "flaticon2-graphic" },
+  { id: "visimisi", label: "Visi & Misi", icon: "flaticon2-rocket-1" },
   { id: "seo", label: "SEO", icon: "flaticon2-search-1" },
   { id: "social", label: "Sosial", icon: "flaticon2-share" },
   { id: "integrations", label: "Integrasi", icon: "flaticon2-layers-1" },
@@ -72,6 +97,10 @@ const configKeys = [
   "websiteUrl",
   "adminEmail",
   "adminPhone",
+  "address",
+  "city",
+  "province",
+  "postalCode",
   "timezone",
   "locale",
   "titleTemplate",
@@ -97,6 +126,15 @@ const configKeys = [
   "gtmContainerId",
   "recaptchaSiteKey",
   "mapsEmbedUrl",
+  "islamicDaysUrl",
+  "smtpHost",
+  "smtpPort",
+  "smtpUser",
+  "smtpPass",
+  "smtpFrom",
+  "contactNotifyEmail",
+  "visi",
+  "misi",
   "maintenanceMode",
   "allowPublicRegistration",
   "cacheTtlSeconds",
@@ -113,6 +151,12 @@ declare global {
       success: (message: string, title?: string) => unknown;
       error: (message: string, title?: string) => unknown;
       clear: () => unknown;
+    };
+    jQuery?: {
+      fn: {
+        summernote?: (...args: unknown[]) => unknown;
+      };
+      (selector: Element | string): JQueryLite;
     };
   }
 }
@@ -154,6 +198,92 @@ function readNumber(v: string | undefined, fallback: number): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
+
+const visiEditorRef = ref<HTMLDivElement | null>(null);
+const misiEditorRef = ref<HTMLDivElement | null>(null);
+
+const SUMMERNOTE_TOOLBAR: unknown[] = [
+  ["style", ["bold", "italic", "underline", "clear"]],
+  ["para", ["ul", "ol", "paragraph"]],
+  ["insert", ["link", "hr"]],
+  ["view", ["codeview"]],
+];
+
+function destroySummernoteOn(el: HTMLDivElement | null): void {
+  const $ = jq();
+  if (!$?.fn?.summernote || !el) return;
+  try {
+    $(el).summernote?.("destroy");
+  } catch { /* ignore */ }
+}
+
+function initSummernoteOn(
+  el: HTMLDivElement | null,
+  opts: { initialHtml: string; placeholder: string; height: number; onChange: (html: string) => void }
+): void {
+  const $ = jq();
+  if (!el || !$?.fn?.summernote) return;
+  const $el = $(el);
+  try { $el.summernote?.("destroy"); } catch { /* ignore */ }
+  $el.summernote?.({
+    airMode: false,
+    disableResizeEditor: false,
+    dialogsInBody: true,
+    placeholder: opts.placeholder,
+    height: opts.height,
+    toolbar: SUMMERNOTE_TOOLBAR,
+    callbacks: {
+      onChange: (contents: string) => opts.onChange(contents),
+    },
+  });
+  $el.summernote?.("code", opts.initialHtml || "");
+}
+
+function syncVisiMisiFromDom(): void {
+  const $ = jq();
+  if (!$?.fn?.summernote) return;
+  if (visiEditorRef.value) {
+    const code = $(visiEditorRef.value).summernote?.("code") as unknown;
+    if (typeof code === "string") form.value.visi = code;
+  }
+  if (misiEditorRef.value) {
+    const code = $(misiEditorRef.value).summernote?.("code") as unknown;
+    if (typeof code === "string") form.value.misi = code;
+  }
+}
+
+async function initVisiMisiEditors(): Promise<void> {
+  await nextTick();
+  initSummernoteOn(visiEditorRef.value, {
+    initialHtml: form.value.visi,
+    placeholder: "Tuliskan visi masjid…",
+    height: 160,
+    onChange: (html) => { form.value.visi = html; },
+  });
+  await nextTick();
+  initSummernoteOn(misiEditorRef.value, {
+    initialHtml: form.value.misi,
+    placeholder: "Tuliskan misi masjid…",
+    height: 220,
+    onChange: (html) => { form.value.misi = html; },
+  });
+}
+
+function destroyVisiMisiEditors(): void {
+  destroySummernoteOn(visiEditorRef.value);
+  destroySummernoteOn(misiEditorRef.value);
+}
+
+watch(activeTab, async (newTab, oldTab) => {
+  if (oldTab === "visimisi") {
+    syncVisiMisiFromDom();
+    destroyVisiMisiEditors();
+  }
+  if (newTab === "visimisi") {
+    await nextTick();
+    void initVisiMisiEditors();
+  }
+});
 
 async function loadConfig(): Promise<void> {
   loading.value = true;
@@ -223,6 +353,7 @@ async function onSaveDraft(): Promise<void> {
     toastError("Anda tidak punya izin update:Setting");
     return;
   }
+  syncVisiMisiFromDom();
   saving.value = true;
   toastLoading("Menyimpan konfigurasi…");
   try {
@@ -245,6 +376,7 @@ async function onPublish(): Promise<void> {
     toastError("Anda tidak punya izin update:Setting");
     return;
   }
+  syncVisiMisiFromDom();
   saving.value = true;
   toastLoading("Publish konfigurasi…");
   try {
@@ -267,6 +399,10 @@ async function onPublish(): Promise<void> {
 onMounted(() => {
   void access.load();
   void loadConfig();
+});
+
+onUnmounted(() => {
+  destroyVisiMisiEditors();
 });
 </script>
 
@@ -346,6 +482,32 @@ onMounted(() => {
                 <input v-model="form.adminPhone" type="text" class="form-control" />
               </div>
             </div>
+            <div class="col-12"><hr class="kt-margin-t-0 kt-margin-b-15" /></div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>Alamat Masjid</label>
+                <textarea v-model="form.address" rows="2" class="form-control" placeholder="Jl. Contoh No. 123, Kel. ..."></textarea>
+              </div>
+            </div>
+            <div class="col-lg-2">
+              <div class="form-group">
+                <label>Kota / Kabupaten</label>
+                <input v-model="form.city" type="text" class="form-control" placeholder="Bekasi" />
+              </div>
+            </div>
+            <div class="col-lg-2">
+              <div class="form-group">
+                <label>Provinsi</label>
+                <input v-model="form.province" type="text" class="form-control" placeholder="Jawa Barat" />
+              </div>
+            </div>
+            <div class="col-lg-2">
+              <div class="form-group">
+                <label>Kode Pos</label>
+                <input v-model="form.postalCode" type="text" class="form-control" placeholder="17114" />
+              </div>
+            </div>
+            <div class="col-12"><hr class="kt-margin-t-0 kt-margin-b-15" /></div>
             <div class="col-lg-4">
               <div class="form-group">
                 <label>Timezone</label>
@@ -423,6 +585,23 @@ onMounted(() => {
               <div class="form-group mb-0">
                 <label>Teks Footer</label>
                 <input v-model="form.footerText" type="text" class="form-control" />
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="activeTab === 'visimisi'" class="row">
+            <div class="col-12">
+              <div class="form-group">
+                <label>Visi</label>
+                <div ref="visiEditorRef" class="cms-summernote-host"></div>
+                <span class="form-text text-muted">Visi utama masjid yang ditampilkan di website.</span>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-group mb-0">
+                <label>Misi</label>
+                <div ref="misiEditorRef" class="cms-summernote-host"></div>
+                <span class="form-text text-muted">Gunakan bullet list untuk misi yang rapi.</span>
               </div>
             </div>
           </div>
@@ -519,6 +698,56 @@ onMounted(() => {
                 <input v-model="form.mapsEmbedUrl" type="text" class="form-control" />
               </div>
             </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>Kalender Hari Besar Islam (URL)</label>
+                <input v-model="form.islamicDaysUrl" type="text" class="form-control" placeholder="https://www.islamicfinder.org/specialislamicdays/" />
+                <span class="form-text text-muted">URL iframe untuk widget hari besar Islam di footer. Default: IslamicFinder.</span>
+              </div>
+            </div>
+            <div class="col-12"><hr /><h6 class="text-muted">Email / SMTP (Gmail)</h6></div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>SMTP Host</label>
+                <input v-model="form.smtpHost" type="text" class="form-control" placeholder="smtp.gmail.com" />
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>SMTP Port</label>
+                <input v-model="form.smtpPort" type="text" class="form-control" placeholder="587" />
+                <span class="form-text text-muted">Gmail: 587 (TLS) atau 465 (SSL).</span>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>SMTP User (Gmail)</label>
+                <input v-model="form.smtpUser" type="email" class="form-control" placeholder="email@gmail.com" />
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>SMTP Password (App Password)</label>
+                <input v-model="form.smtpPass" type="password" class="form-control" autocomplete="new-password" placeholder="16 karakter dari Google App Password" />
+                <span class="form-text text-muted">
+                  Gmail <strong>tidak</strong> menerima password login biasa. Aktifkan 2-Step Verification, lalu buat App Password di
+                  <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">myaccount.google.com/apppasswords</a>
+                  dan paste di sini (tanpa spasi).
+                </span>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>From Address</label>
+                <input v-model="form.smtpFrom" type="email" class="form-control" placeholder="Kosongkan = sama dengan SMTP user" />
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>Email Tujuan Notifikasi Kontak</label>
+                <input v-model="form.contactNotifyEmail" type="email" class="form-control" placeholder="Kosongkan = Admin Email di tab Website" />
+              </div>
+            </div>
           </div>
 
           <div v-else class="row">
@@ -563,6 +792,13 @@ onMounted(() => {
 .cms-config-tabs {
   width: 100%;
   padding: 0 1.25rem;
+  flex-wrap: wrap;
+}
+
+.cms-config-tabs .nav-link {
+  white-space: nowrap;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.85rem;
 }
 
 .cms-image-preview {
@@ -600,5 +836,11 @@ onMounted(() => {
   width: 42px;
   height: 42px;
   object-fit: contain;
+}
+
+.cms-summernote-host {
+  border: 1px solid #e2e5ec;
+  border-radius: 4px;
+  min-height: 120px;
 }
 </style>

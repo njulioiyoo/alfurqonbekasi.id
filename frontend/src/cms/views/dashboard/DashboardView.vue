@@ -51,7 +51,7 @@ onMounted(async () => {
       <div class="kt-portlet kt-portlet--height-fluid">
         <div class="kt-widget14">
           <div class="kt-widget14__header kt-margin-b-30">
-            <h3 class="kt-widget14__title">Konten masjid</h3>
+            <h3 class="kt-widget14__title">Modul operasional</h3>
             <span class="kt-widget14__desc"> Modul CMS terhubung bertahap </span>
           </div>
           <div class="kt-widget14__content">

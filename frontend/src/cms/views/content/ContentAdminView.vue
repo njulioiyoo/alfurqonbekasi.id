@@ -13,26 +13,15 @@ import {
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
 
-const contentTypes = [
-  { key: "article", label: "Artikel Kajian" },
-  { key: "announcement", label: "Pengumuman" },
-  { key: "program", label: "Program Sosial" },
-  { key: "event", label: "Event / Agenda" },
-  { key: "prayer_staff", label: "Jadwal Petugas Ibadah" },
-  { key: "page", label: "Halaman Statis" },
-  { key: "gallery", label: "Galeri" },
-] as const;
-
-type ContentType = (typeof contentTypes)[number]["key"];
+type ContentType = "event" | "prayer_staff" | "program" | "gallery";
 
 const props = withDefaults(
   defineProps<{
-    /** Jika diisi: hanya kelola `type` ini (menu Jadwal → `event`). */
-    fixedType?: ContentType | null;
-    listTitle?: string;
+    fixedType: ContentType;
+    listTitle: string;
     searchHintText?: string;
   }>(),
-  { fixedType: null, listTitle: "", searchHintText: "" }
+  { searchHintText: "" }
 );
 
 interface JQueryLite {
@@ -72,6 +61,12 @@ const { flags: accessFlags } = storeToRefs(access);
 const isScheduleMode = computed(() => props.fixedType === "event");
 const isPrayerStaffMode = computed(() => props.fixedType === "prayer_staff");
 const isProgramSocialMode = computed(() => props.fixedType === "program");
+const isGalleryMode = computed(() => props.fixedType === "gallery");
+
+const GALLERY_IMAGE_WIDTH = 390;
+const GALLERY_IMAGE_HEIGHT = 353;
+const GALLERY_IMAGE_SIZE_HINT = `Ukuran wajib tepat ${GALLERY_IMAGE_WIDTH}×${GALLERY_IMAGE_HEIGHT} px (JPEG, PNG, atau WebP).`;
+const galleryCoverAccept = "image/jpeg,image/png,image/webp";
 const isOperationalScheduleMode = computed(() => isScheduleMode.value || isPrayerStaffMode.value);
 
 const canCreateContent = computed(() =>
@@ -79,44 +74,36 @@ const canCreateContent = computed(() =>
     ? accessFlags.value.canCreatePrayerSchedule
     : isProgramSocialMode.value
       ? accessFlags.value.canCreateProgramSocial
-      : accessFlags.value.canCreateContent
+      : accessFlags.value.canCreateGallery
 );
 const canUpdateContent = computed(() =>
   isOperationalScheduleMode.value
     ? accessFlags.value.canUpdatePrayerSchedule
     : isProgramSocialMode.value
       ? accessFlags.value.canUpdateProgramSocial
-      : accessFlags.value.canUpdateContent
+      : accessFlags.value.canUpdateGallery
 );
 const canDeleteContent = computed(() =>
   isOperationalScheduleMode.value
     ? accessFlags.value.canDeletePrayerSchedule
     : isProgramSocialMode.value
       ? accessFlags.value.canDeleteProgramSocial
-      : accessFlags.value.canDeleteContent
+      : accessFlags.value.canDeleteGallery
 );
 const canAnyMutate = computed(
   () => canCreateContent.value || canUpdateContent.value || canDeleteContent.value
 );
 
 const tableRef = ref<InstanceType<typeof KtRemoteDatatable> | null>(null);
-const portletTitle = computed(() => props.listTitle?.trim() || "Konten");
-const datatableSearchHint = computed(
-  () =>
-    props.searchHintText?.trim() ||
-    "Semua konten memakai tabel content_items. Bedakan lewat field type; attr_1–5 untuk field tambahan per tipe."
-);
+const portletTitle = computed(() => props.listTitle);
+const datatableSearchHint = computed(() => props.searchHintText);
 const datatableSearchPlaceholder = computed(() => {
   if (isOperationalScheduleMode.value) return "Cari judul, slug, petugas…";
   if (isProgramSocialMode.value) return "Cari judul program, lokasi, slug…";
-  return "Cari judul, slug, tipe…";
+  return "Cari judul kegiatan, slug…";
 });
-const datatableMergeBody = computed(() =>
-  props.fixedType ? { contentType: props.fixedType } : undefined
-);
-const datatableTableId = computed(() =>
-  props.fixedType ? `content_datatable_${props.fixedType}` : "content_datatable"
-);
+const datatableMergeBody = computed(() => ({ contentType: props.fixedType }));
+const datatableTableId = computed(() => `content_datatable_${props.fixedType}`);
 
 const contentColumns = computed((): unknown[] => {
   const statusCol = {
@@ -199,17 +186,19 @@ const contentColumns = computed((): unknown[] => {
       actionsCol,
     ];
   }
+  if (isGalleryMode.value) {
+    return [
+      { field: "title", title: "Judul kegiatan", width: 220 },
+      { field: "slug", title: "Slug", width: 120 },
+      { field: "attr1", title: "Tanggal kegiatan", width: 130 },
+      { field: "attr2", title: "Lokasi", width: 130 },
+      statusCol,
+      publishCol,
+      actionsCol,
+    ];
+  }
 
-  return [
-    { field: "type", title: "Tipe", width: 120 },
-    { field: "title", title: "Judul", width: 220 },
-    { field: "slug", title: "Slug", width: 140 },
-    { field: "attr1", title: "Attr1", width: 90 },
-    { field: "attr2", title: "Attr2", width: 90 },
-    statusCol,
-    publishCol,
-    actionsCol,
-  ];
+  return [];
 });
 
 function escapeHtml(s: string): string {
@@ -255,6 +244,36 @@ function toastError(message: string): void {
 
 function plainTextFromHtml(html: string): string {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function readImageFileDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("INVALID_IMAGE"));
+    };
+    img.src = url;
+  });
+}
+
+async function validateGalleryImageFile(file: File): Promise<string | null> {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) {
+    return "Gambar galeri hanya mendukung format JPEG, PNG, atau WebP.";
+  }
+  try {
+    const { width, height } = await readImageFileDimensions(file);
+    if (width === GALLERY_IMAGE_WIDTH && height === GALLERY_IMAGE_HEIGHT) return null;
+    return `Gambar galeri wajib berukuran tepat ${GALLERY_IMAGE_WIDTH}×${GALLERY_IMAGE_HEIGHT} piksel. Ukuran terdeteksi: ${width}×${height}.`;
+  } catch {
+    return "Tidak dapat membaca ukuran gambar. Pastikan file gambar valid.";
+  }
 }
 
 function destroySummernoteOn(el: HTMLDivElement | null): void {
@@ -418,7 +437,7 @@ const editId = ref<string | null>(null);
 const publishedAtInputRef = ref<HTMLInputElement | null>(null);
 const excerptEditorRef = ref<HTMLDivElement | null>(null);
 const bodyEditorRef = ref<HTMLDivElement | null>(null);
-const defaultContentType = (): ContentType => props.fixedType ?? "article";
+const defaultContentType = (): ContentType => props.fixedType;
 
 const form = ref({
   type: defaultContentType(),
@@ -442,7 +461,8 @@ const modalTitle = computed(() => {
   if (isScheduleMode.value) return editId.value ? "Ubah jadwal" : "Jadwal baru";
   if (isPrayerStaffMode.value) return editId.value ? "Ubah jadwal petugas" : "Jadwal petugas baru";
   if (isProgramSocialMode.value) return editId.value ? "Ubah program sosial" : "Program sosial baru";
-  return editId.value ? "Ubah konten" : "Konten baru";
+  if (isGalleryMode.value) return editId.value ? "Ubah foto galeri" : "Foto galeri baru";
+  return editId.value ? "Ubah program sosial" : "Program sosial baru";
 });
 const coverPreviewUrl = computed(() =>
   form.value.coverImageUrl?.trim()
@@ -450,10 +470,10 @@ const coverPreviewUrl = computed(() =>
     : "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='320'%3E%3Crect width='100%25' height='100%25' fill='%23f1f3f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23979fb8' font-family='Arial' font-size='20'%3ENo cover image%3C/text%3E%3C/svg%3E"
 );
 const minExcerptLen = computed(() =>
-  form.value.type === "event" || form.value.type === "prayer_staff" ? 20 : 300
+  form.value.type === "event" || form.value.type === "prayer_staff" || form.value.type === "gallery" ? 0 : 300
 );
 const minBodyLen = computed(() =>
-  form.value.type === "event" || form.value.type === "prayer_staff" ? 0 : 300
+  form.value.type === "event" || form.value.type === "prayer_staff" || form.value.type === "gallery" ? 0 : 300
 );
 const excerptLen = computed(() => plainTextFromHtml(form.value.excerpt).length);
 const excerptRemaining = computed(() => Math.max(0, minExcerptLen.value - excerptLen.value));
@@ -523,7 +543,7 @@ async function openEdit(id: string): Promise<void> {
       return;
     }
     form.value = {
-      type: (props.fixedType ?? json.data.type) as ContentType,
+      type: props.fixedType,
       title: json.data.title,
       slug: json.data.slug,
       excerpt: json.data.excerpt ?? "",
@@ -575,9 +595,15 @@ async function onSave(): Promise<void> {
     saving.value = false;
     return;
   }
+  if (isGalleryMode.value && !form.value.coverImageUrl.trim()) {
+    err.value = "Foto galeri wajib diupload.";
+    toastError(err.value);
+    saving.value = false;
+    return;
+  }
   toastLoading(isOperationalScheduleMode.value ? "Menyimpan jadwal…" : "Menyimpan konten…");
   const payload = {
-    type: props.fixedType ?? form.value.type,
+    type: props.fixedType,
     title: form.value.title.trim(),
     slug: form.value.slug.trim() || slugify(form.value.title),
     excerpt: form.value.excerpt.trim(),
@@ -611,7 +637,15 @@ async function onSave(): Promise<void> {
     }
     closeModal();
     reloadTable();
-    toastSuccess(isOperationalScheduleMode.value ? "Jadwal berhasil disimpan." : "Konten berhasil disimpan.");
+    toastSuccess(
+      isOperationalScheduleMode.value
+        ? "Jadwal berhasil disimpan."
+        : isProgramSocialMode.value
+          ? "Program berhasil disimpan."
+          : isGalleryMode.value
+            ? "Foto galeri berhasil disimpan."
+            : "Data berhasil disimpan."
+    );
   } catch {
     err.value = "Tidak dapat menghubungi server";
     toastError(err.value);
@@ -626,16 +660,28 @@ async function onPickCover(ev: Event): Promise<void> {
   const file = t.files[0];
   t.value = "";
   err.value = "";
+  if (isGalleryMode.value) {
+    const dimErr = await validateGalleryImageFile(file);
+    if (dimErr) {
+      err.value = dimErr;
+      toastError(dimErr);
+      return;
+    }
+  }
   uploadingImage.value = true;
+  toastLoading("Mengupload gambar…");
   try {
-    const json = await uploadAdminImage(file);
+    const json = await uploadAdminImage(file, isGalleryMode.value ? { context: "gallery" } : undefined);
     if (!json.ok || !json.data?.url) {
       err.value = json.error?.message || "Upload gambar gagal";
+      toastError(err.value);
       return;
     }
     form.value.coverImageUrl = json.data.url;
+    toastSuccess(isGalleryMode.value ? "Foto galeri berhasil diupload." : "Gambar cover berhasil diupload.");
   } catch {
     err.value = "Tidak dapat menghubungi server";
+    toastError(err.value);
   } finally {
     uploadingImage.value = false;
   }
@@ -717,7 +763,11 @@ onBeforeUnmount(() => {
               ><i
                 class="kt-font-brand"
                 :class="
-                  isOperationalScheduleMode ? 'flaticon2-calendar' : isProgramSocialMode ? 'flaticon2-heart' : 'flaticon2-copy'
+                  isOperationalScheduleMode
+                    ? 'flaticon2-calendar'
+                    : isProgramSocialMode
+                      ? 'flaticon2-heart'
+                      : 'flaticon2-image-file'
                 "
               ></i
             ></span>
@@ -726,7 +776,13 @@ onBeforeUnmount(() => {
           <div v-if="canCreateContent" class="kt-portlet__head-toolbar">
             <button type="button" class="btn btn-sm btn-brand" @click="openCreate">
               <i class="la la-plus"></i>
-              {{ isOperationalScheduleMode ? "Tambah jadwal" : isProgramSocialMode ? "Tambah program" : "Tambah konten" }}
+              {{
+                isOperationalScheduleMode
+                  ? "Tambah jadwal"
+                  : isProgramSocialMode
+                    ? "Tambah program"
+                    : "Tambah foto"
+              }}
             </button>
           </div>
         </div>
@@ -759,7 +815,7 @@ onBeforeUnmount(() => {
                   <div v-if="err" class="alert alert-outline-danger fade show kt-margin-b-15" role="alert">
                     <div class="alert-text">{{ err }}</div>
                   </div>
-                  <!-- Form jadwal: lokasi/waktu + ringkasan/catatan pakai Summernote (sama seperti Konten). -->
+                  <!-- Form jadwal: lokasi/waktu + ringkasan/catatan pakai Summernote. -->
                   <div v-if="isOperationalScheduleMode" class="row cms-content-form-grid cms-schedule-form">
                     <div class="col-12">
                       <h6 class="kt-font-bold kt-font-transform-u text-muted">Identitas</h6>
@@ -804,7 +860,7 @@ onBeforeUnmount(() => {
                         <div class="cms-cover-preview kt-margin-t-10">
                           <img :src="coverPreviewUrl" alt="Cover preview" />
                         </div>
-                        <span class="form-text text-muted">Sama seperti menu Konten: disimpan di <code>cover_image_url</code>.</span>
+                        <span class="form-text text-muted">Disimpan di <code>cover_image_url</code>.</span>
                       </div>
                     </div>
                     <div class="col-12 kt-margin-t-15">
@@ -875,7 +931,7 @@ onBeforeUnmount(() => {
                         <label>Catatan / materi tambahan (opsional)</label>
                         <div ref="bodyEditorRef" class="cms-summernote-host"></div>
                         <div class="form-text text-muted kt-margin-t-5">
-                          Tidak wajib panjang. Untuk artikel utama pakai menu Konten (tipe artikel).
+                          Opsional — ringkasan materi atau catatan tambahan.
                         </div>
                       </div>
                     </div>
@@ -889,15 +945,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div v-else class="row cms-content-form-grid">
-                    <div v-if="!fixedType" class="col-md-4">
-                      <div class="form-group">
-                        <label>Tipe</label>
-                        <select v-model="form.type" class="form-control">
-                          <option v-for="t in contentTypes" :key="t.key" :value="t.key">{{ t.label }}</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div :class="fixedType ? 'col-md-12' : 'col-md-8'">
+                    <div class="col-md-12">
                       <div class="form-group"><label>Judul</label><input v-model="form.title" type="text" class="form-control" /></div>
                     </div>
                     <div class="col-md-6"><div class="form-group"><label>Slug</label><input v-model="form.slug" type="text" class="form-control" placeholder="auto dari judul jika kosong" /></div></div>
@@ -918,22 +966,25 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="col-md-6">
                       <div class="form-group">
-                        <label>Cover Image</label>
+                        <label>{{ isGalleryMode ? "Foto galeri" : "Cover Image" }}</label>
                         <input v-model="form.coverImageUrl" type="text" class="form-control" readonly />
                         <div class="custom-file kt-margin-t-10">
                           <input
                             id="content_cover_upload"
                             type="file"
                             class="custom-file-input"
-                            accept="image/*"
+                            :accept="isGalleryMode ? galleryCoverAccept : 'image/*'"
                             :disabled="uploadingImage"
                             @change="onPickCover"
                           />
                           <label class="custom-file-label" for="content_cover_upload">
-                            {{ uploadingImage ? "Mengupload..." : "Pilih file cover" }}
+                            {{ uploadingImage ? "Mengupload..." : isGalleryMode ? "Pilih foto galeri" : "Pilih file cover" }}
                           </label>
                         </div>
-                        <div class="cms-cover-preview kt-margin-t-10">
+                        <div v-if="isGalleryMode" class="form-text text-muted kt-margin-t-5">
+                          {{ GALLERY_IMAGE_SIZE_HINT }}
+                        </div>
+                        <div class="cms-cover-preview kt-margin-t-10" :class="{ 'cms-cover-preview--gallery': isGalleryMode }">
                           <img :src="coverPreviewUrl" alt="Cover preview" />
                         </div>
                       </div>
@@ -998,38 +1049,24 @@ onBeforeUnmount(() => {
                         </div>
                       </div>
                     </template>
-                    <template v-else>
+                    <template v-else-if="isGalleryMode">
                       <div class="col-12">
+                        <h6 class="kt-font-bold kt-font-transform-u text-muted">Detail kegiatan (opsional)</h6>
+                      </div>
+                      <div class="col-md-6">
                         <div class="form-group">
-                          <label>Attr 1</label>
-                          <input v-model="form.attr1" type="text" class="form-control" />
+                          <label>Tanggal kegiatan</label>
+                          <input v-model="form.attr1" type="text" class="form-control" placeholder="contoh: 12 Mei 2026" />
                         </div>
                       </div>
-                      <div class="col-12 col-md-6">
+                      <div class="col-md-6">
                         <div class="form-group">
-                          <label>Attr 2</label>
-                          <input v-model="form.attr2" type="text" class="form-control" />
-                        </div>
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <div class="form-group">
-                          <label>Attr 3</label>
-                          <input v-model="form.attr3" type="text" class="form-control" />
-                        </div>
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <div class="form-group">
-                          <label>Attr 4</label>
-                          <input v-model="form.attr4" type="text" class="form-control" />
-                        </div>
-                      </div>
-                      <div class="col-12 col-md-6">
-                        <div class="form-group">
-                          <label>Attr 5</label>
-                          <input v-model="form.attr5" type="text" class="form-control" />
+                          <label>Lokasi</label>
+                          <input v-model="form.attr2" type="text" class="form-control" placeholder="contoh: Aula masjid" />
                         </div>
                       </div>
                     </template>
+
                     <div class="col-12 kt-margin-t-10">
                       <label class="kt-checkbox">
                         <input v-model="form.isFeatured" type="checkbox" />
@@ -1072,6 +1109,16 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.cms-cover-preview--gallery {
+  max-width: 390px;
+  min-height: 353px;
+  max-height: 353px;
+}
+
+.cms-cover-preview--gallery img {
+  object-fit: cover;
 }
 
 #cms_modal_content_form .modal-body {

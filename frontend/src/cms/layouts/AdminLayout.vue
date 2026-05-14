@@ -245,7 +245,7 @@ function logout(): void {
     <div id="kt_header_mobile" class="kt-header-mobile kt-header-mobile--fixed">
       <div class="kt-header-mobile__logo">
         <RouterLink :to="{ name: 'dashboard' }">
-          <img alt="Logo" :src="logoSm" />
+          <img alt="Logo" :src="logoSm" class="cms-logo-mobile" />
         </RouterLink>
       </div>
       <div class="kt-header-mobile__toolbar">
@@ -268,8 +268,8 @@ function logout(): void {
               <div id="kt_header_brand" class="kt-header__brand kt-grid__item">
                 <div class="kt-header__brand-logo">
                   <RouterLink :to="{ name: 'dashboard' }">
-                    <img alt="Logo" :src="logoDefault" class="kt-header__brand-logo-default" />
-                    <img alt="Logo" :src="logoSm" class="kt-header__brand-logo-sticky" />
+                    <img alt="Logo" :src="logoDefault" class="kt-header__brand-logo-default cms-logo-default" />
+                    <img alt="Logo" :src="logoSm" class="kt-header__brand-logo-sticky cms-logo-sticky" />
                   </RouterLink>
                 </div>
                 <div class="kt-header__brand-nav">
@@ -561,6 +561,24 @@ function logout(): void {
   to {
     transform: rotate(360deg);
   }
+}
+
+.cms-logo-mobile {
+  max-height: 30px;
+  width: auto;
+  object-fit: contain;
+}
+
+.cms-logo-default {
+  max-height: 45px;
+  width: auto;
+  object-fit: contain;
+}
+
+.cms-logo-sticky {
+  max-height: 30px;
+  width: auto;
+  object-fit: contain;
 }
 </style>
 

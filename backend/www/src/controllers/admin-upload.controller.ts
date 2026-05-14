@@ -5,6 +5,7 @@ import type { Response } from "express";
 import multer from "multer";
 import type { AuthedRequest } from "../middleware/auth.middleware.js";
 import { uploadsRootDir } from "../utils/uploads-path.js";
+import { validateGalleryImageBuffer } from "../utils/gallery-image.js";
 
 const allowedMime = new Set([
   "image/jpeg",
@@ -74,7 +75,11 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
       !a.can("create", "Article") &&
       !a.can("update", "Article") &&
       !a.can("create", "PrayerSchedule") &&
-      !a.can("update", "PrayerSchedule"))
+      !a.can("update", "PrayerSchedule") &&
+      !a.can("create", "Gallery") &&
+      !a.can("update", "Gallery") &&
+      !a.can("create", "Program") &&
+      !a.can("update", "Program"))
   ) {
     res.status(403).json({
       ok: false,
@@ -90,6 +95,14 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
   if (!allowedMime.has(file.mimetype)) {
     res.status(400).json({ ok: false, error: { code: "INVALID_FILE_TYPE", message: "Format file tidak didukung" } });
     return;
+  }
+  const uploadContext = typeof req.body?.context === "string" ? req.body.context.trim() : "";
+  if (uploadContext === "gallery") {
+    const dimErr = validateGalleryImageBuffer(file.buffer, file.mimetype);
+    if (dimErr) {
+      res.status(400).json({ ok: false, error: { code: "INVALID_IMAGE_SIZE", message: dimErr } });
+      return;
+    }
   }
   try {
     const uploadDir = join(uploadsRootDir(), "content");
@@ -115,7 +128,11 @@ export async function postFile(req: AuthedRequest, res: Response): Promise<void>
       !a.can("create", "Article") &&
       !a.can("update", "Article") &&
       !a.can("create", "PrayerSchedule") &&
-      !a.can("update", "PrayerSchedule"))
+      !a.can("update", "PrayerSchedule") &&
+      !a.can("create", "Gallery") &&
+      !a.can("update", "Gallery") &&
+      !a.can("create", "Program") &&
+      !a.can("update", "Program"))
   ) {
     res.status(403).json({
       ok: false,
