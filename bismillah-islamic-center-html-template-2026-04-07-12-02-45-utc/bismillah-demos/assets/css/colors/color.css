@@ -1,0 +1,223 @@
+/*===== Theme Color =====*/
+/*===== Background Color =====*/
+.theme-bg,
+.theme-bg-layer:before,
+nav > div > ul li > a:before,
+nav > div > ul li > a:after,
+.srch-cls-btn:hover,
+.theme-btn.green-bg:before,
+.theme-btn.green-bg:after,
+.serv-bx:hover .srv-inf.green-bg,
+.plr-bx > i:after,
+.owl-carousel .owl-nav > button.owl-prev,
+.owl-carousel .owl-nav > button.owl-next,
+.dnt-lst > a:hover,
+.dnt-lst > a:focus,
+.team-bx:hover .team-inf,
+.team-inf > span:before,
+.serv-bx2:hover .serv-inf2,
+.pagination > li:hover a, 
+.pagination > li a:focus,
+.pagination > li.active span,
+.breadcrumb::before,
+.event-thmb > span:before,
+.event-thmb .countdown:before,
+.event-detail-img > span:before,
+.event-detail-img .countdown:before,
+.event-detail-desc ul > li:before,
+.member-expr-lst > li:before,
+.rspn-mnu-btn:hover,
+.rspn-scil > li a:hover,
+.rspn-mnu-cls:hover,
+.preloader
+{
+	background-color: #ff9822;
+}
+
+
+{
+	background: #ff9822;
+}
+
+/*===== Text Color =====*/
+.theme-clr,
+nav > div > ul li:hover, 
+nav > div > ul li:hover > a, 
+nav > div > ul li a:focus,
+nav > div > ul > li.menu-item-has-children:hover:after,
+.scl1 > a:hover,
+.scl1 > a:focus,
+.tp-lnks > li a:hover,
+.tp-lnks > li a:focus,
+.srch-btn:hover,
+.srch-btn:focus,
+.header-search form > button:hover,
+.header-search form > button:focus,
+header.style1 nav > div > a.srch-btn:hover,
+header.style1 nav > div > a.srch-btn:focus,
+.abt-vdo > a:hover,
+.abt-vdo > a:focus,
+.prayer-timings > table tr:hover td,
+.serv-bx:hover > i.green-clr,
+.post-inf > h5 a:hover,
+.post-inf > h5 a:focus,
+.pst-mta > li a:hover,
+.pst-mta > li a:focus,
+.post-inf > a:hover,
+.post-inf > a:focus,
+.event-bx > h5 a:hover,
+.event-bx > h5 a:focus,
+.event-bx > a:hover,
+.event-bx > a:focus,
+.event-bx:hover > a:hover,
+.event-bx:hover > a:focus,
+.rcnt-inf > h6 a:hover,
+.rcnt-inf > h6 a:focus,
+.cpy-rgt > p a:hover,
+.cpy-rgt > p a:focus,
+.cnt-inf > li a:hover,
+.cnt-inf > li a:focus,
+.inf-lst > li a:hover,
+.inf-lst > li a:focus,
+ol.breadcrumb > li.breadcrumb-item.active,
+.breadcrumb > li a:hover,
+.breadcrumb > li a:focus,
+.cause-inf > h5 a:hover,
+.cause-inf > h5 a:focus,
+.event-inf > h5 a:hover,
+.event-inf > h5 a:focus,
+.event-inf > a:hover,
+.event-inf > a:focus,
+.cnt-inf-lst > li a:hover,
+.cnt-inf-lst > li a:focus,
+.tch-dwn-btn > a:hover,
+.tch-dwn-btn > a:focus,
+.tch-thmb > a:hover,
+.tch-thmb > a:focus,
+.lst-cas > h6 a:hover,
+.lst-cas > h6 a:focus,
+.widget ul li > a:hover,
+.widget ul li > a:focus,
+.tag-clouds > a:hover,
+.tag-clouds > a:focus,
+.service-detail-nav > ul li:hover > a,
+.service-detail-nav > ul li.active > a,
+.service-detail-nav > ul li > a:focus,
+.product-inf > h5 a:hover,
+.product-inf > h5 a:focus,
+.product-detail-tabs > ul li a.nav-link:hover,
+.product-detail-tabs > ul li a.nav-link:focus,
+.product-detail-tabs > ul li a.nav-link.active,
+.rsnp-mnu ul > li > a:focus,
+.rsnp-mnu ul > li:hover > a,
+.rsnp-mnu ul > li.active > a,
+.rspn-srch > button:hover,
+.rsnp-mnu ul li.menu-item-has-children.active:before,
+header.style1 .scl1 > a:hover,
+header.style1 .scl1 > a:focus,
+.rspn-cnt > span a:hover,
+.rspn-cnt > span a:focus
+{
+	color: #ff9822;
+}
+
+/*===== Border Color =====*/
+.theme-brd-clr,
+.dnt-lst > a:hover,
+.dnt-lst > a:focus,
+.abt-vdo.style2:before,
+.serv-bx2:hover .serv-inf2,
+.pagination > li:hover,
+.pagination > li.active,
+.product-detail-tabs > ul li a.nav-link:hover,
+.product-detail-tabs > ul li a.nav-link:focus,
+.product-detail-tabs > ul li a.nav-link.active
+{
+	border-color: #ff9822;
+}
+
+/*===== Border Top Color =====*/ 
+.testi-desc
+{
+	border-top-color: #ff9822;
+}
+
+/*===== Border Right Color =====*/ 
+
+{
+	border-right-color: #ff9822;
+}
+
+/*===== Border Bottom Color =====*/
+
+{
+	border-bottom-color: #ff9822;
+}
+
+/*===== Border Left Color =====*/ 
+
+{
+	border-left-color: #ff9822;
+}
+
+
+
+
+/*===== Green Color =====*/
+/*===== Background Color =====*/
+.green-bg,
+.green-bg-layer:before,
+.theme-btn.theme-bg:before,
+.theme-btn.theme-bg:after,
+.serv-bx:hover .srv-inf.theme-bg,
+.owl-carousel .owl-nav > button:hover,
+.owl-carousel .owl-nav > button:focus
+{
+	background-color: #5d2b00;
+}
+
+
+{
+	background: #5d2b00;
+}
+
+/*===== Text Color =====*/
+.green-clr,
+.serv-bx:hover > i.theme-clr,
+.serv-bx > h5 a:hover,
+.serv-bx > h5 a:focus,
+.error-page-inner > p a:hover,
+.error-page-inner > p a:focus
+{
+	color: #5d2b00;
+}
+
+/*===== Border Color =====*/
+.green-brd-clr
+{
+	border-color: #5d2b00;
+}
+
+/*===== Border Top Color =====*/ 
+
+{
+	border-top-color: #5d2b00;
+}
+
+/*===== Border Right Color =====*/ 
+
+{
+	border-right-color: #5d2b00;
+}
+
+/*===== Border Bottom Color =====*/
+
+{
+	border-bottom-color: #5d2b00;
+}
+
+/*===== Border Left Color =====*/ 
+
+{
+	border-left-color: #5d2b00;
+}

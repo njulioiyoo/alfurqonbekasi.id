@@ -5,5 +5,3 @@ dist
 .env
 .env.local
 .env.*.local
-# Aset Metronic ~200MB — jalankan: npm run copy:metronic
-public/metronic/assets

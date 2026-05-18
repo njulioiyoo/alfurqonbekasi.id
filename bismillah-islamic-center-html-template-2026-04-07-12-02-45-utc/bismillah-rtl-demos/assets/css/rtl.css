@@ -1,0 +1,256 @@
+body,
+.abt-sec-wrp.style2 {direction: rtl;}
+
+.rev_slider_wrapper,
+.owl-carousel {direction: ltr;}
+
+ul.tp-lnks > li,
+.inf-lst,
+.inf-lst > li,
+header.style2 .logo,
+nav > div > ul,
+nav > div > ul > li,
+.dnt-wrp,
+.rcnt-bx > a,
+header.style1 .logo,
+.cntry-selc .selec-wrp,
+.selec-wrp .btn-group > button span,
+.widget > ul li a,
+.cmt-bx > img,
+.product-detail-tabs > ul.nav-tabs li.nav-item,
+.team-detail-inf {float: right;}
+
+.hdr-srch,
+.abt-vdo.style2 img,
+header.style1 nav,
+nav > div > a.srch-btn,
+.cntry-selc,
+.team-member-name .scl1,
+.tch-dwn-btn {float: left;}
+
+.float-left {float: right !important;}
+
+.float-right {float: left !important;}
+
+nav > div ul ul,
+.menu-sec .mnu-btm-shp,
+.abt-desc,
+.dnt-wrp,
+.cause-bx,
+.post-bx,
+.event-bx,
+.widget,
+.cnt-inf,
+.bootstrap-select.btn-group .dropdown-toggle .filter-option,
+.blog-detail,
+.event-bx2,
+.event-detail,
+.product-detail-inf,
+.product-detail-tabs,
+.related-pro-cont h4,
+.team-detail-wrp,
+.tch-wrp,
+.سبب-detail,
+.service-detail-desc,
+.cnt-inf-wrp {text-align: right;}
+
+.widget > ul.cat-lst li {text-align: left;}
+
+nav > div ul ul,
+.cnt-inf > li i,
+.event-thmb > span, 
+.event-detail-img > span,
+.event-thmb .countdown > li + li::before, 
+.event-detail-img .countdown > li + li::before,
+.event-detail-desc ul li::before,
+.member-cnt > ul > li i,
+.member-expr-lst > li::before,
+.cnt-inf-lst > li i {
+  left: auto;
+  right: 0;
+}
+
+ul.float-left > li:before,
+header.style2 ul.tp-lnks > li::before,
+nav > div ul li.menu-item-has-children > i,
+.prg-wrp .progress .progress-bar > span,
+.newsletter > button,
+.srch-frm > button,
+.event-detail-img .countdown,
+.search-form > button {
+  right: auto;
+  left: 0;
+}
+
+ul.tp-lnks > li i,
+.inf-lst > li i,
+.widget > span i,
+.tag-clouds > span,
+.cart-quantity > form label,
+.cart-quantity > form input,
+.product-detail-tabs > ul.nav-tabs li.nav-item {
+  margin-left: 10px;
+  margin-right: 0;
+}
+
+.cntry-selc .selec-wrp {
+  margin-left: 0;
+  margin-right: 10px;
+}
+
+.prg-wrp > span:last-child {margin-left: 0;}
+
+.pst-mta > li i,
+.tch-inf > span i {
+  margin-left: 7px;
+  margin-right: 0;
+}
+
+.rcnt-inf > span i,
+.cmt-inf i.far.fa-calendar-alt {
+  margin-left: 5px;
+  margin-right: 0;
+}
+
+ul.tp-lnks,
+.inf-lst,
+nav > div > ul,
+nav > div ul ul,
+.pst-mta,
+.cnt-inf,
+.widget > ul,
+.cmt-thrd,
+.event-thmb .countdown,
+.pagination,
+.event-detail-img .countdown,
+.event-detail-desc ul,
+.product-detail-tabs > ul.nav-tabs,
+.member-cnt > ul,
+.cnt-inf-lst {padding-right: 0;}
+
+.scl1 > span,
+.pst-mta > li {
+  margin-right: 0;
+  margin-left: 15px;
+}
+
+.inf-lst > li,
+.prg-wrp > span {
+  margin-left: 30px;
+  margin-right: 0;
+}
+
+.cmt-bx > img {
+  margin-right: 0;
+  margin-left: 20px;
+}
+
+nav > div > a.srch-btn {
+  margin-left: 0;
+  margin-right: 50px;
+}
+
+ul.float-left > li,
+nav > div ul li.menu-item-has-children {
+  padding-right: 0;
+  padding-left: 20px;
+}
+
+.rcnt-bx > a + .rcnt-inf,
+.event-detail-desc ul li {
+  padding-right: 20px;
+  padding-left: 0;
+}
+
+.selec-wrp .btn-group > button {
+  padding-left: 30px;
+  padding-right: 20px;
+}
+
+.event-bx {
+  padding-left: 25px;
+  padding-right: 100px;
+}
+
+.search-form > input {
+  padding-left: 30px;
+  padding-right: 60px;
+}
+
+.cnt-inf > li,
+.product-detail-inf,
+.member-cnt > ul > li {
+  padding-left: 0;
+  padding-right: 25px;
+}
+
+p.price-text {
+  padding-right: 10px;
+  padding-left: 0;
+}
+
+.cmt-thrd .children {
+  padding-left: 0;
+  padding-right: 50px;
+}
+
+nav > div ul ul li.menu-item-has-children > i {
+  right: auto;
+  left: 25px;
+}
+
+.event-bx > span {
+  left: auto;
+  right: 25px;
+}
+
+nav > div ul ul ul {
+  left: auto;
+  right: 100%;
+}
+
+nav > div ul ul li.menu-item-has-children > i {
+  -webkit-transform: rotateY(180deg);
+  -ms-transform: rotateY(180deg);
+  -o-transform: rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+.hdr-srch > form input {
+  padding: 0 20px 0 0;
+  border-left: 0;
+  border-right: 1px solid rgba(255,255,255,.2);
+}
+
+.abt-vdo.style2::before {
+  left: 30px;
+  right: 35px;
+}
+
+.plr-bx::before {
+  right: auto;
+  left: -55px;
+}
+
+.srv-inf::before {
+  right: 0;
+  left: .5px;
+  -webkit-transform: rotate(5deg);
+  -ms-transform: rotate(5deg);
+  -o-transform: rotate(5deg);
+  transform: rotate(5deg);
+}
+
+.breadcrumb-item + .breadcrumb-item {
+  padding-left: 0;
+  padding-right: .5rem;
+}
+.breadcrumb-item + .breadcrumb-item:before {
+  padding-right: 0;
+  padding-left: .5rem;
+}
+
+.cnt-inf-lst > li {
+  padding-left: 40px;
+  padding-right: 50px;
+}
