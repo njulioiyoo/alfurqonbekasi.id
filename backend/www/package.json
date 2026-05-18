@@ -9,6 +9,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate": "node dist/migrate-cli.js",
+    "seed:demo": "tsx src/seed-demo-cli.ts",
+    "seed:demo:clear": "tsx src/seed-clear-demo-cli.ts",
     "dev": "tsx watch src/index.ts"
   },
   "engines": {

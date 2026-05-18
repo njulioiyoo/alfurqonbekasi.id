@@ -26,6 +26,7 @@ const PUBLIC_KEYS = new Set([
   "islamicDaysUrl",
   "visi",
   "misi",
+  "homeBannersJson",
 ]);
 
 export async function getPublicConfig(_req: Request, res: Response): Promise<void> {

@@ -5,6 +5,7 @@ import type { Response } from "express";
 import multer from "multer";
 import type { AuthedRequest } from "../middleware/auth.middleware.js";
 import { uploadsRootDir } from "../utils/uploads-path.js";
+import { validateBannerImageBuffer } from "../utils/banner-image.js";
 import { validateGalleryImageBuffer } from "../utils/gallery-image.js";
 
 const allowedMime = new Set([
@@ -30,7 +31,7 @@ const allowedDocMime = new Set([
 
 export const uploadImageMiddleware = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
+  limits: { fileSize: 6 * 1024 * 1024 }, // banner 1920×990 can exceed 3MB
 }).single("file");
 
 export const uploadFileMiddleware = multer({
@@ -72,6 +73,7 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
   if (
     !a ||
     (!a.can("manage", "all") &&
+      !a.can("update", "Setting") &&
       !a.can("create", "Article") &&
       !a.can("update", "Article") &&
       !a.can("create", "PrayerSchedule") &&
@@ -99,6 +101,13 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
   const uploadContext = typeof req.body?.context === "string" ? req.body.context.trim() : "";
   if (uploadContext === "gallery") {
     const dimErr = validateGalleryImageBuffer(file.buffer, file.mimetype);
+    if (dimErr) {
+      res.status(400).json({ ok: false, error: { code: "INVALID_IMAGE_SIZE", message: dimErr } });
+      return;
+    }
+  }
+  if (uploadContext === "banner") {
+    const dimErr = validateBannerImageBuffer(file.buffer, file.mimetype);
     if (dimErr) {
       res.status(400).json({ ok: false, error: { code: "INVALID_IMAGE_SIZE", message: dimErr } });
       return;

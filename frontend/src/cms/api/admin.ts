@@ -151,6 +151,7 @@ export type ContentRow = {
   isFeatured: boolean;
   attr1: string;
   attr2: string;
+  attr3?: string;
 };
 
 export type ContentDetailResponse = {

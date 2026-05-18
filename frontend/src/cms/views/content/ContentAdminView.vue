@@ -98,7 +98,8 @@ const tableRef = ref<InstanceType<typeof KtRemoteDatatable> | null>(null);
 const portletTitle = computed(() => props.listTitle);
 const datatableSearchHint = computed(() => props.searchHintText);
 const datatableSearchPlaceholder = computed(() => {
-  if (isOperationalScheduleMode.value) return "Cari judul, slug, petugas…";
+  if (isScheduleMode.value) return "Cari judul, lokasi, pemateri…";
+  if (isPrayerStaffMode.value) return "Cari slot ibadah, petugas, jenis tugas…";
   if (isProgramSocialMode.value) return "Cari judul program, lokasi, slug…";
   return "Cari judul kegiatan, slug…";
 });
@@ -155,10 +156,10 @@ const contentColumns = computed((): unknown[] => {
 
   if (isScheduleMode.value) {
     return [
-      { field: "title", title: "Judul", width: 200 },
-      { field: "slug", title: "Slug", width: 120 },
-      { field: "attr1", title: "Lokasi", width: 120 },
-      { field: "attr2", title: "Pemateri", width: 120 },
+      { field: "title", title: "Nama kegiatan / kajian", width: 200 },
+      { field: "attr1", title: "Lokasi", width: 140 },
+      { field: "attr2", title: "Pemateri", width: 140 },
+      { field: "attr3", title: "Waktu mulai", width: 160 },
       statusCol,
       publishCol,
       actionsCol,
@@ -166,10 +167,10 @@ const contentColumns = computed((): unknown[] => {
   }
   if (isPrayerStaffMode.value) {
     return [
-      { field: "title", title: "Ibadah / Kegiatan", width: 200 },
-      { field: "slug", title: "Slug", width: 120 },
-      { field: "attr1", title: "Slot Ibadah", width: 130 },
-      { field: "attr2", title: "Petugas Utama", width: 130 },
+      { field: "title", title: "Tanggal", width: 110 },
+      { field: "attr1", title: "Slot ibadah", width: 110 },
+      { field: "attr2", title: "Jenis tugas", width: 120 },
+      { field: "attr3", title: "Petugas utama", width: 150 },
       statusCol,
       publishCol,
       actionsCol,
@@ -788,6 +789,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="kt-portlet__body kt-portlet__body--fit">
           <KtRemoteDatatable
+            :key="props.fixedType"
             ref="tableRef"
             :table-id="datatableTableId"
             read-path="/admin/content/datatable"
@@ -870,10 +872,10 @@ onBeforeUnmount(() => {
                       <div class="form-group"><label>{{ isPrayerStaffMode ? "Slot ibadah" : "Lokasi" }}</label><input v-model="form.attr1" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'Subuh / Dzuhur / Jumat / Maghrib / Isya' : 'Masjid / aula / online'" /></div>
                     </div>
                     <div class="col-md-6">
-                      <div class="form-group"><label>{{ isPrayerStaffMode ? "Petugas utama" : "Pemateri" }}</label><input v-model="form.attr2" type="text" class="form-control" /></div>
+                      <div class="form-group"><label>{{ isPrayerStaffMode ? "Jenis tugas" : "Pemateri" }}</label><input v-model="form.attr2" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'imam / khatib / muadzin / bilal' : ''" /></div>
                     </div>
                     <div class="col-md-6">
-                      <div class="form-group"><label>{{ isPrayerStaffMode ? "Jenis tugas" : "Waktu mulai" }}</label><input v-model="form.attr3" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'imam / khatib / muadzin / bilal' : 'contoh: Jumat 19:30 / 2025-05-15 19:30'" /></div>
+                      <div class="form-group"><label>{{ isPrayerStaffMode ? "Petugas utama" : "Waktu mulai" }}</label><input v-model="form.attr3" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'nama ustadz / qari' : 'contoh: Jumat 19:30 / 2025-05-15 19:30'" /></div>
                     </div>
                     <div class="col-md-6">
                       <div class="form-group"><label>{{ isPrayerStaffMode ? "Pengganti / backup" : "Selesai / berulang" }}</label><input v-model="form.attr4" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'opsional' : 'contoh: 21:00 / setiap pekan'" /></div>

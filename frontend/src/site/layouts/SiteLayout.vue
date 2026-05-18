@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, nextTick, ref } from "vue";
-import { RouterLink, RouterView, useRoute } from "vue-router";
-import { siteMenu, type MenuGroup } from "../menu.js";
+import { RouterLink, RouterView } from "vue-router";
+import { siteMenu } from "../menu.js";
 import { getPublicConfig, type SiteConfig } from "../api.js";
 
 const B = "/bismillah/assets";
-const route = useRoute();
-
 const cfg = ref<SiteConfig | null>(null);
 
 const siteName = computed(() => cfg.value?.websiteName || "Masjid Alfurqon Bekasi");
@@ -27,9 +25,11 @@ const logoSmUrl = computed(() => cfg.value?.logoLightUrl || cfg.value?.logoUrl |
 const footerText = computed(() => cfg.value?.footerText || siteName.value);
 const islamicDaysUrl = computed(() => cfg.value?.islamicDaysUrl || "https://www.islamicfinder.org/specialislamicdays/");
 
-const socials = computed(() => {
+type SocialLink = { url: string; icon: string; label: string };
+
+const socials = computed((): SocialLink[] => {
   if (!cfg.value) return [];
-  const list: { url: string; icon: string; label: string }[] = [];
+  const list: SocialLink[] = [];
   if (cfg.value.igUrl) list.push({ url: cfg.value.igUrl, icon: "fab fa-instagram", label: "Instagram" });
   if (cfg.value.ytUrl) list.push({ url: cfg.value.ytUrl, icon: "fab fa-youtube", label: "YouTube" });
   if (cfg.value.fbUrl) list.push({ url: cfg.value.fbUrl, icon: "fab fa-facebook-f", label: "Facebook" });
@@ -39,10 +39,23 @@ const socials = computed(() => {
   return list;
 });
 
-function isActive(group: MenuGroup): boolean {
-  if (group.routeName) return route.name === group.routeName;
-  return group.children?.some((c) => route.name === c.routeName) ?? false;
-}
+const templateTopbarSocials: SocialLink[] = [
+  { url: "#", icon: "fab fa-twitter", label: "Twitter" },
+  { url: "#", icon: "fab fa-facebook-f", label: "Facebook" },
+  { url: "#", icon: "fab fa-linkedin-in", label: "Linkedin" },
+  { url: "#", icon: "fab fa-google-plus-g", label: "Google Plus" },
+];
+
+/** index4 topbar: tepat 4 ikon agar tinggi & lebar topbar sama template. */
+const headerSocials = computed((): SocialLink[] => {
+  const fromCfg = socials.value.slice(0, 4);
+  return fromCfg.length > 0 ? fromCfg : templateTopbarSocials;
+});
+
+const displayPhone = computed(() => phone.value || "1800-123-456-7");
+const displayEmail = computed(() => email.value || "support@bismillah.com");
+const displayRspnPhone = computed(() => phone.value || "+(00) 123-345-11");
+const displayRspnEmail = computed(() => email.value || "info@bismillah.com");
 
 const year = computed(() => new Date().getFullYear());
 
@@ -77,11 +90,18 @@ onMounted(async () => {
         <div class="container">
           <ul class="float-left tp-lnks">
             <li><i class="far fa-map theme-clr"></i>{{ shortLocation }}</li>
-            <li><i class="far fa-clock theme-clr"></i>Senin - Minggu | Buka 24 Jam</li>
+            <li><i class="far fa-clock theme-clr"></i>Mon - Sat 8:00 AM - 18:00 PM</li>
           </ul>
-          <div v-if="socials.length" class="scl1 float-right">
-            <span>Ikuti kami:</span>
-            <a v-for="s in socials" :key="s.label" :href="s.url" :title="s.label" target="_blank"><i :class="s.icon"></i></a>
+          <div class="scl1 float-right">
+            <span>Follow us:</span>
+            <a
+              v-for="s in headerSocials"
+              :key="s.label"
+              :href="s.url"
+              :title="s.label"
+              target="_blank"
+              rel="noopener noreferrer"
+            ><i :class="s.icon"></i></a>
           </div>
         </div>
       </div>
@@ -89,16 +109,24 @@ onMounted(async () => {
       <div class="logo-inf-sec">
         <div class="container">
           <div class="logo">
-            <RouterLink :to="{ name: 'home' }" title="Logo">
-              <img :src="logoUrl" :alt="siteName" />
+            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'home' }" custom>
+              <a :href="href" title="Logo" @click="navigate"><img :src="logoUrl" :alt="siteName" /></a>
             </RouterLink>
           </div>
           <div class="float-right cnt-inf-btn">
             <ul class="inf-lst">
-              <li v-if="phone"><i class="flaticon-phone-volume theme-clr brd-rd50"></i>Hubungi: <span class="theme-clr">{{ phone }}</span></li>
-              <li v-if="email"><i class="fas fa-envelope theme-clr brd-rd50"></i><a :href="`mailto:${email}`">{{ email }}</a></li>
+              <li>
+                <i class="flaticon-phone-volume theme-clr brd-rd50"></i>Call us:
+                <span class="theme-clr">{{ displayPhone }}</span>
+              </li>
+              <li>
+                <i class="fas fa-envelope theme-clr brd-rd50"></i>
+                <a :href="email ? `mailto:${email}` : '#'" :title="displayEmail">{{ displayEmail }}</a>
+              </li>
             </ul>
-            <RouterLink :to="{ name: 'donasi' }" class="theme-btn theme-bg brd-rd5">DONASI</RouterLink>
+            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'donasi' }" custom>
+              <a :href="href" class="theme-btn theme-bg brd-rd5" title="" @click="navigate">MAKE DONATION</a>
+            </RouterLink>
           </div>
         </div>
       </div>
@@ -110,23 +138,26 @@ onMounted(async () => {
             <div>
               <ul>
                 <template v-for="group in siteMenu" :key="group.label">
-                  <li v-if="group.routeName && !group.children" :class="{ 'kt-menu__item--active': isActive(group) }">
-                    <RouterLink :to="{ name: group.routeName }" :title="group.label">{{ group.label }}</RouterLink>
+                  <li v-if="group.routeName && !group.children">
+                    <RouterLink v-slot="{ href, navigate }" :to="{ name: group.routeName }" custom>
+                      <a :href="href" :title="group.label" @click="navigate">{{ group.label }}</a>
+                    </RouterLink>
                   </li>
-                  <li v-else class="menu-item-has-children" :class="{ 'kt-menu__item--active': isActive(group) }">
-                    <a href="javascript:;" :title="group.label">{{ group.label }}</a>
-                    <i class="fas fa-angle-down"></i>
+                  <li v-else class="menu-item-has-children">
+                    <a href="#" :title="group.label">{{ group.label }}</a><i class="fas fa-angle-down"></i>
                     <ul>
                       <li v-for="child in group.children" :key="child.routeName">
-                        <RouterLink :to="{ name: child.routeName }" :title="child.label">{{ child.label }}</RouterLink>
+                        <RouterLink v-slot="{ href, navigate }" :to="{ name: child.routeName }" custom>
+                          <a :href="href" :title="child.label" @click="navigate">{{ child.label }}</a>
+                        </RouterLink>
                       </li>
                     </ul>
                   </li>
                 </template>
               </ul>
               <div class="hdr-srch">
-                <form @submit.prevent>
-                  <input type="text" placeholder="Cari..." />
+                <form>
+                  <input type="text" placeholder="Search Here" />
                   <button type="submit"><i class="fa fa-search"></i></button>
                 </form>
               </div>
@@ -142,8 +173,8 @@ onMounted(async () => {
     <!-- Header Search Overlay -->
     <div class="header-search">
       <span class="srch-cls-btn brd-rd5"><i class="fas fa-times"></i></span>
-      <form @submit.prevent>
-        <input type="text" placeholder="Cari..." />
+      <form>
+        <input type="text" placeholder="Search here..." />
         <button type="submit"><i class="fas fa-search"></i></button>
       </form>
     </div>
@@ -151,23 +182,25 @@ onMounted(async () => {
     <!-- Responsive Header -->
     <div class="rspn-hdr">
       <div class="rspn-mdbr">
-        <ul v-if="socials.length" class="rspn-scil">
-          <li v-for="s in socials" :key="s.label"><a :href="s.url" :title="s.label" target="_blank"><i :class="s.icon"></i></a></li>
+        <ul class="rspn-scil">
+          <li v-for="s in headerSocials" :key="`rspn-${s.label}`">
+            <a :href="s.url" :title="s.label" target="_blank" rel="noopener noreferrer"><i :class="s.icon"></i></a>
+          </li>
         </ul>
         <form class="rspn-srch" @submit.prevent>
-          <input type="text" placeholder="Kata kunci..." />
+          <input type="text" placeholder="Enter Your Keyword" />
           <button type="submit"><i class="fa fa-search"></i></button>
         </form>
       </div>
       <div class="lg-mn">
         <div class="logo">
-          <RouterLink :to="{ name: 'home' }" title="Logo">
-            <img :src="logoSmUrl" :alt="siteName" />
+          <RouterLink v-slot="{ href, navigate }" :to="{ name: 'home' }" custom>
+            <a :href="href" title="Logo" @click="navigate"><img :src="logoSmUrl" :alt="siteName" /></a>
           </RouterLink>
         </div>
         <div class="rspn-cnt">
-          <span v-if="email"><i class="fas fa-envelope theme-clr"></i><a :href="`mailto:${email}`">{{ email }}</a></span>
-          <span v-if="phone"><i class="flaticon-phone-volume theme-clr"></i>{{ phone }}</span>
+          <span><i class="fas fa-envelope theme-clr"></i><a :href="email ? `mailto:${email}` : '#'" :title="displayRspnEmail">{{ displayRspnEmail }}</a></span>
+          <span><i class="flaticon-phone-volume theme-clr"></i>{{ displayRspnPhone }}</span>
         </div>
         <span class="rspn-mnu-btn"><i class="fa fa-list-ul"></i></span>
       </div>
@@ -176,13 +209,17 @@ onMounted(async () => {
         <ul>
           <template v-for="group in siteMenu" :key="group.label">
             <li v-if="group.routeName && !group.children">
-              <RouterLink :to="{ name: group.routeName }" :title="group.label">{{ group.label }}</RouterLink>
+              <RouterLink v-slot="{ href, navigate }" :to="{ name: group.routeName }" custom>
+                <a :href="href" :title="group.label" @click="navigate">{{ group.label }}</a>
+              </RouterLink>
             </li>
             <li v-else class="menu-item-has-children">
-              <a href="javascript:;" :title="group.label">{{ group.label }}</a>
+              <a href="#" :title="group.label">{{ group.label }}</a>
               <ul>
                 <li v-for="child in group.children" :key="child.routeName">
-                  <RouterLink :to="{ name: child.routeName }" :title="child.label">{{ child.label }}</RouterLink>
+                  <RouterLink v-slot="{ href, navigate }" :to="{ name: child.routeName }" custom>
+                    <a :href="href" :title="child.label" @click="navigate">{{ child.label }}</a>
+                  </RouterLink>
                 </li>
               </ul>
             </li>
@@ -279,18 +316,6 @@ onMounted(async () => {
 </template>
 
 <style>
-header.style2 .logo-inf-sec .logo img {
-  max-height: 65px;
-  width: auto;
-  object-fit: contain;
-}
-
-.rspn-hdr .lg-mn .logo img {
-  max-height: 45px;
-  width: auto;
-  object-fit: contain;
-}
-
 .site-footer-map {
   width: 100%;
   height: 160px;

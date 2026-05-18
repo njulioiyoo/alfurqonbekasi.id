@@ -240,6 +240,25 @@ watch(
   { deep: true }
 );
 
+/** Ganti halaman/route dengan `tableId` atau kolom berbeda — init ulang KTDatatable. */
+watch(
+  () => [props.tableId, props.columns] as const,
+  () => {
+    const $ = jq();
+    const el = rootRef.value;
+    if (ktInitialized && $?.fn?.KTDatatable && el) {
+      try {
+        ($(el) as JQueryLite).KTDatatable("destroy");
+      } catch {
+        /* ignore */
+      }
+      ktInitialized = false;
+    }
+    scheduleMount();
+  },
+  { deep: true }
+);
+
 onMounted(() => {
   syncMergeExtras();
   scheduleMount();

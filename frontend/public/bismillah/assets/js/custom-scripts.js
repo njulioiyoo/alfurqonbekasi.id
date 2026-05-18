@@ -145,23 +145,8 @@ $(document).ready(function(){
       "<i class='fa fa-angle-right'></i>"
       ],
     });
-	
-	$('.featured-area').owlCarousel({
-		loop:true,
-		margin:0,
-		nav:true,
-		responsive:{
-			0:{
-				items:1
-			},
-			600:{
-				items:1
-			},
-			1000:{
-				items:1
-			}
-		}
-	});
+
+    /* Hero slider: diinisialisasi oleh Vue (HomeView.vue), bukan di sini. */
 
   }
 

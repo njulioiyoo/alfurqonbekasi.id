@@ -207,22 +207,29 @@ onMounted(async () => {
   void access.load();
   void loadBrandingConfig();
   shellReady.value = false;
-  mountMetronicCss();
+  const shellFallbackTimer = window.setTimeout(() => {
+    shellReady.value = true;
+  }, 12_000);
   try {
-    await mountMetronicScripts();
-  } catch {
-    /* layout tetap dipakai walau bundle gagal */
+    mountMetronicCss();
+    try {
+      await mountMetronicScripts();
+    } catch {
+      /* layout tetap dipakai walau bundle gagal */
+    }
+    await nextTick();
+    await waitFrames(2);
+    try {
+      const w = window as unknown as { KTUtil?: { init?: () => void } };
+      w.KTUtil?.init?.();
+    } catch {
+      /* Metronic tidak wajib */
+    }
+    document.body.className = BODY_CLASS_READY;
+  } finally {
+    window.clearTimeout(shellFallbackTimer);
+    shellReady.value = true;
   }
-  await nextTick();
-  await waitFrames(2);
-  try {
-    const w = window as unknown as { KTUtil?: { init?: () => void } };
-    w.KTUtil?.init?.();
-  } catch {
-    /* Metronic tidak wajib */
-  }
-  document.body.className = BODY_CLASS_READY;
-  shellReady.value = true;
 });
 
 onUnmounted(() => {

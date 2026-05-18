@@ -1,0 +1,25 @@
+/**
+ * Penyesuaian shell Vue → layout template (index4).
+ * Hanya wrapper #app + batas ukuran logo setara aset demo logogg.png (268×120).
+ */
+#app {
+  float: left;
+  position: relative;
+  width: 100%;
+}
+
+header.style2 .logo-inf-sec .logo > a > img {
+  width: 70%;
+  max-width: 268px;
+  max-height: 120px;
+  height: auto;
+  object-fit: contain;
+}
+
+.rspn-hdr .lg-mn .logo > a > img {
+  width: 60%;
+  max-width: 200px;
+  max-height: 90px;
+  height: auto;
+  object-fit: contain;
+}

@@ -263,6 +263,8 @@ export const router = createRouter({
   ],
 });
 
+const ACCESS_LOAD_TIMEOUT_MS = 12_000;
+
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
   await auth.hydrate();
@@ -275,11 +277,22 @@ router.beforeEach(async (to) => {
 
   if (token) {
     if (!access.menu.length && !access.loading) {
-      await access.load();
+      await Promise.race([
+        access.load(),
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, ACCESS_LOAD_TIMEOUT_MS);
+        }),
+      ]);
     }
 
     const allowedRouteNames = new Set(access.menu.map((m) => m.routerName));
     const firstAllowed = access.menu[0]?.routerName || "dashboard";
+
+    /** Hindari redirect loop saat menu kosong (API gagal / role belum punya item menu). */
+    if (allowedRouteNames.size === 0) {
+      allowedRouteNames.add("dashboard");
+    }
+
     const targetName = typeof to.name === "string" ? to.name : "";
     const isAllowedRoute = targetName.length > 0 && allowedRouteNames.has(targetName);
 

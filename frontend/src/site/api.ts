@@ -1,5 +1,15 @@
 const BASE = "/api/public";
 
+/** Slide banner beranda (JSON `homeBannersJson` di CMS). */
+export type HomeBannerSlide = {
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+  /** URL tombol "Selengkapnya" — bisa path internal (/donasi) atau https://… */
+  linkUrl?: string;
+  linkLabel?: string;
+};
+
 export interface SiteConfig {
   websiteName: string;
   websiteTagline: string;
@@ -25,6 +35,32 @@ export interface SiteConfig {
   islamicDaysUrl: string;
   visi: string;
   misi: string;
+  homeBanners: HomeBannerSlide[];
+}
+
+function parseHomeBannersJson(raw: string | undefined): HomeBannerSlide[] {
+  if (!raw?.trim()) return [];
+  try {
+    const data = JSON.parse(raw) as unknown;
+    if (!Array.isArray(data)) return [];
+    const out: HomeBannerSlide[] = [];
+    for (const row of data) {
+      if (!row || typeof row !== "object") continue;
+      const o = row as Record<string, unknown>;
+      const imageUrl = typeof o.imageUrl === "string" ? o.imageUrl.trim() : "";
+      if (!imageUrl) continue;
+      out.push({
+        imageUrl,
+        title: typeof o.title === "string" ? o.title : "",
+        subtitle: typeof o.subtitle === "string" ? o.subtitle : "",
+        linkUrl: typeof o.linkUrl === "string" ? o.linkUrl.trim() : "",
+        linkLabel: typeof o.linkLabel === "string" ? o.linkLabel.trim() : "",
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 export async function getPublicConfig(): Promise<SiteConfig> {
@@ -53,6 +89,7 @@ export async function getPublicConfig(): Promise<SiteConfig> {
     islamicDaysUrl: "https://www.islamicfinder.org/specialislamicdays/",
     visi: "",
     misi: "",
+    homeBanners: [],
   };
 
   try {
@@ -61,10 +98,12 @@ export async function getPublicConfig(): Promise<SiteConfig> {
     if (!json.ok || !json.data?.values) return defaults;
     const v = json.data.values as Record<string, string>;
     for (const key of Object.keys(defaults) as (keyof SiteConfig)[]) {
+      if (key === "homeBanners") continue;
       if (v[key] !== undefined && v[key] !== "") {
         (defaults[key] as string) = v[key];
       }
     }
+    defaults.homeBanners = parseHomeBannersJson(v.homeBannersJson);
   } catch { /* fallback to defaults */ }
 
   return defaults;

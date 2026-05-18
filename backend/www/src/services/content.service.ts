@@ -11,6 +11,7 @@ export type ContentListRow = {
   is_featured: boolean;
   attr_1: string | null;
   attr_2: string | null;
+  attr_3: string | null;
 };
 
 export type ContentDetailRow = ContentListRow & {
@@ -34,6 +35,7 @@ const CONTENT_SORT: Record<string, string> = {
   sortOrder: "sort_order",
   attr1: "attr_1",
   attr2: "attr_2",
+  attr3: "attr_3",
   RecordID: "id",
 };
 
@@ -63,6 +65,7 @@ function buildContentWhereClause(params: {
          OR COALESCE(excerpt, '') ILIKE '%' || $${n}::text || '%'
          OR COALESCE(attr_1, '') ILIKE '%' || $${n}::text || '%'
          OR COALESCE(attr_2, '') ILIKE '%' || $${n}::text || '%'
+         OR COALESCE(attr_3, '') ILIKE '%' || $${n}::text || '%'
        )`);
     values.push(search);
     n += 1;
@@ -105,7 +108,7 @@ export async function listContentPaginatedFiltered(params: {
   const offsetIdx = whereVals.length + 2;
 
   const r = await pool.query<ContentListRow>(
-    `SELECT id, type, title, slug, status, published_at, sort_order, is_featured, attr_1, attr_2
+    `SELECT id, type, title, slug, status, published_at, sort_order, is_featured, attr_1, attr_2, attr_3
      FROM content_items
      ${whereSql}
      ORDER BY ${sortCol} ${sortDirSql} NULLS LAST, title ASC

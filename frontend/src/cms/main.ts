@@ -14,4 +14,11 @@ async function bootstrap(): Promise<void> {
   app.mount("#app");
 }
 
-void bootstrap();
+void bootstrap().catch((err: unknown) => {
+  console.error("[cms] bootstrap gagal:", err);
+  const root = document.getElementById("app");
+  if (root) {
+    root.innerHTML =
+      '<p style="margin:2rem;font-family:system-ui,sans-serif">Gagal memuat CMS. Periksa konsol browser, pastikan backend API jalan, lalu muat ulang.</p>';
+  }
+});

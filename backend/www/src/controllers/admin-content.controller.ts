@@ -191,6 +191,7 @@ export async function listContentDatatable(req: AuthedRequest, res: Response): P
       isFeatured: x.is_featured,
       attr1: x.attr_1 ?? "",
       attr2: x.attr_2 ?? "",
+      attr3: x.attr_3 ?? "",
     }));
     res.json({
       meta: { page: result.page, pages, perpage: result.limit, total: result.total },

@@ -466,6 +466,9 @@ ON CONFLICT (slug) DO UPDATE SET
   sort_order = EXCLUDED.sort_order;
 
 DELETE FROM admin_menu_items WHERE slug = 'content';
+
+INSERT INTO app_config (key, value) VALUES ('homeBannersJson', '[]')
+ON CONFLICT (key) DO NOTHING;
 `;
 
 export async function runMigrations(): Promise<void> {

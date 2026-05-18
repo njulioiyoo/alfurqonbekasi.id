@@ -15,7 +15,7 @@ function jq(): Window["jQuery"] {
   return window.jQuery;
 }
 
-type ConfigTab = "website" | "branding" | "visimisi" | "seo" | "social" | "integrations" | "advanced";
+type ConfigTab = "website" | "home" | "branding" | "visimisi" | "seo" | "social" | "integrations" | "advanced";
 
 const activeTab = ref<ConfigTab>("website");
 const saving = ref(false);
@@ -79,6 +79,7 @@ const form = ref({
 
 const tabs: { id: ConfigTab; label: string; icon: string }[] = [
   { id: "website", label: "Website", icon: "flaticon2-architecture-and-city" },
+  { id: "home", label: "Banner beranda", icon: "flaticon2-photo-camera" },
   { id: "branding", label: "Branding", icon: "flaticon2-graphic" },
   { id: "visimisi", label: "Visi & Misi", icon: "flaticon2-rocket-1" },
   { id: "seo", label: "SEO", icon: "flaticon2-search-1" },
@@ -88,6 +89,112 @@ const tabs: { id: ConfigTab; label: string; icon: string }[] = [
 ];
 
 type ImageField = "logoUrl" | "logoLightUrl" | "faviconUrl" | "seoOgImage";
+
+type CmsHomeBannerSlide = {
+  imageUrl: string;
+  title: string;
+  subtitle: string;
+  linkUrl: string;
+  linkLabel: string;
+};
+
+function emptyBannerSlide(): CmsHomeBannerSlide {
+  return { imageUrl: "", title: "", subtitle: "", linkUrl: "", linkLabel: "Selengkapnya" };
+}
+
+function parseBannerSlidesFromJson(raw: string | undefined): CmsHomeBannerSlide[] {
+  if (!raw?.trim()) return [emptyBannerSlide()];
+  try {
+    const data = JSON.parse(raw) as unknown;
+    if (!Array.isArray(data) || data.length === 0) return [emptyBannerSlide()];
+    const out: CmsHomeBannerSlide[] = [];
+    for (const row of data) {
+      if (!row || typeof row !== "object") continue;
+      const o = row as Record<string, unknown>;
+      out.push({
+        imageUrl: typeof o.imageUrl === "string" ? o.imageUrl : "",
+        title: typeof o.title === "string" ? o.title : "",
+        subtitle: typeof o.subtitle === "string" ? o.subtitle : "",
+        linkUrl: typeof o.linkUrl === "string" ? o.linkUrl : "",
+        linkLabel: typeof o.linkLabel === "string" && o.linkLabel.trim() ? o.linkLabel : "Selengkapnya",
+      });
+    }
+    return out.length ? out : [emptyBannerSlide()];
+  } catch {
+    return [emptyBannerSlide()];
+  }
+}
+
+const bannerSlides = ref<CmsHomeBannerSlide[]>([emptyBannerSlide()]);
+
+const BANNER_W = 1920;
+const BANNER_H = 990;
+const bannerAccept = "image/jpeg,image/png,image/webp";
+const bannerSizeHint = `Gambar wajib tepat ${BANNER_W}×${BANNER_H} px (JPEG, PNG, atau WebP).`;
+
+function readImageFileDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("INVALID_IMAGE"));
+    };
+    img.src = url;
+  });
+}
+
+async function validateBannerFile(file: File): Promise<string | null> {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) return "Banner hanya JPEG, PNG, atau WebP.";
+  try {
+    const { width, height } = await readImageFileDimensions(file);
+    if (width === BANNER_W && height === BANNER_H) return null;
+    return `Banner wajib ${BANNER_W}×${BANNER_H} px. Terdeteksi: ${width}×${height}.`;
+  } catch {
+    return "Tidak dapat membaca ukuran gambar.";
+  }
+}
+
+function addBannerSlide(): void {
+  bannerSlides.value.push(emptyBannerSlide());
+}
+
+function removeBannerSlide(index: number): void {
+  if (bannerSlides.value.length <= 1) {
+    bannerSlides.value = [emptyBannerSlide()];
+    return;
+  }
+  bannerSlides.value.splice(index, 1);
+}
+
+async function onBannerImagePick(index: number, ev: Event): Promise<void> {
+  const t = ev.target;
+  if (!(t instanceof HTMLInputElement) || !t.files?.[0]) return;
+  const file = t.files[0];
+  t.value = "";
+  const err = await validateBannerFile(file);
+  if (err) {
+    toastError(err);
+    return;
+  }
+  toastLoading("Mengupload banner…");
+  try {
+    const json = await uploadAdminImage(file, { context: "banner" });
+    if (!json.ok || !json.data?.url) {
+      toastError(json.error?.message || "Upload gagal");
+      return;
+    }
+    bannerSlides.value[index] = { ...bannerSlides.value[index]!, imageUrl: json.data.url };
+    toastSuccess("Gambar banner berhasil diupload.");
+  } catch {
+    toastError("Tidak dapat menghubungi server saat upload");
+  }
+}
 
 const activeTabLabel = computed(() => tabs.find((t) => t.id === activeTab.value)?.label ?? "Website");
 
@@ -308,6 +415,7 @@ async function loadConfig(): Promise<void> {
       }
       (form.value[key] as string) = raw;
     }
+    bannerSlides.value = parseBannerSlidesFromJson(values.homeBannersJson);
   } catch {
     loadError.value = "Tidak dapat menghubungi server";
   } finally {
@@ -321,6 +429,14 @@ function formToMap(): Record<string, string> {
     const val = form.value[key];
     out[key] = String(val);
   }
+  const slides = bannerSlides.value.map((s) => ({
+    imageUrl: s.imageUrl.trim(),
+    title: s.title.trim(),
+    subtitle: s.subtitle.trim(),
+    linkUrl: s.linkUrl.trim(),
+    linkLabel: s.linkLabel.trim() || "Selengkapnya",
+  }));
+  out.homeBannersJson = JSON.stringify(slides.filter((s) => s.imageUrl.length > 0));
   return out;
 }
 
@@ -526,6 +642,80 @@ onUnmounted(() => {
                   <option value="en-US">English (en-US)</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          <div v-else-if="activeTab === 'home'" class="row">
+            <div class="col-12">
+              <p class="text-muted kt-margin-b-15">
+                Atur slide hero beranda (seperti demo template). Tiap slide: gambar latar, judul, subjudul, dan tombol tautan.
+              </p>
+            </div>
+            <div
+              v-for="(slide, idx) in bannerSlides"
+              :key="idx"
+              class="col-12 kt-margin-b-20 cms-banner-slide-card"
+            >
+              <div class="kt-portlet kt-portlet--bordered kt-portlet--height-fluid">
+                <div class="kt-portlet__head kt-portlet__head--noborder kt-padding-b-0">
+                  <div class="kt-portlet__head-label">
+                    <span class="kt-portlet__head-icon"><i class="la la-image"></i></span>
+                    <h3 class="kt-portlet__head-title">Slide {{ idx + 1 }}</h3>
+                  </div>
+                  <div class="kt-portlet__head-toolbar">
+                    <button type="button" class="btn btn-sm btn-label-danger" @click="removeBannerSlide(idx)">
+                      <i class="la la-trash"></i> Hapus slide
+                    </button>
+                  </div>
+                </div>
+                <div class="kt-portlet__body">
+                  <div class="row">
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <label>Gambar latar ({{ BANNER_W }}×{{ BANNER_H }} px)</label>
+                        <input v-model="slide.imageUrl" type="text" class="form-control" readonly placeholder="URL setelah upload" />
+                        <div class="custom-file kt-margin-t-10">
+                          <input
+                            :id="'cfg_banner_img_' + idx"
+                            type="file"
+                            class="custom-file-input"
+                            :accept="bannerAccept"
+                            @change="onBannerImagePick(idx, $event)"
+                          />
+                          <label class="custom-file-label" :for="'cfg_banner_img_' + idx">Upload gambar</label>
+                        </div>
+                        <span class="form-text text-muted">{{ bannerSizeHint }}</span>
+                        <div v-if="slide.imageUrl" class="cms-banner-preview kt-margin-t-10">
+                          <img :src="slide.imageUrl" alt="" />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-lg-7">
+                      <div class="form-group">
+                        <label>Judul</label>
+                        <input v-model="slide.title" type="text" class="form-control" placeholder="Judul utama di atas slide" />
+                      </div>
+                      <div class="form-group">
+                        <label>Subjudul / deskripsi singkat</label>
+                        <input v-model="slide.subtitle" type="text" class="form-control" placeholder="Teks di bawah judul" />
+                      </div>
+                      <div class="form-group">
+                        <label>URL tombol (Selengkapnya / Read more)</label>
+                        <input v-model="slide.linkUrl" type="text" class="form-control" placeholder="/donasi atau https://…" />
+                      </div>
+                      <div class="form-group mb-0">
+                        <label>Teks tombol</label>
+                        <input v-model="slide.linkLabel" type="text" class="form-control" placeholder="Selengkapnya" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12">
+              <button type="button" class="btn btn-sm btn-brand" @click="addBannerSlide">
+                <i class="la la-plus"></i> Tambah slide
+              </button>
             </div>
           </div>
 
@@ -842,5 +1032,21 @@ onUnmounted(() => {
   border: 1px solid #e2e5ec;
   border-radius: 4px;
   min-height: 120px;
+}
+
+.cms-banner-slide-card .cms-banner-preview {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 1920 / 990;
+  border: 1px solid #e2e5ec;
+  border-radius: 4px;
+  background: #f7f8fa;
+  overflow: hidden;
+}
+
+.cms-banner-slide-card .cms-banner-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style>
