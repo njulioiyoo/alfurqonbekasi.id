@@ -310,14 +310,13 @@ async function waitForAccessMenu(access: ReturnType<typeof useAccessStore>): Pro
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
   await auth.hydrate();
-  const token = auth.token;
   const access = useAccessStore();
 
-  if (to.meta.requiresAuth && !token) {
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: "login", query: { redirect: to.fullPath }, replace: true };
   }
 
-  if (token) {
+  if (auth.isAuthenticated) {
     await waitForAccessMenu(access);
 
     const allowedRouteNames = new Set(access.menu.map((m) => m.routerName));

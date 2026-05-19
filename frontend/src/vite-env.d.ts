@@ -2,8 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE: string;
-  /** Min ~16 karakter — kunci AES blob sesi di sessionStorage */
-  readonly VITE_SESSION_SECRET?: string;
+  readonly VITE_PROXY_TARGET?: string;
 }
 
 interface ImportMeta {

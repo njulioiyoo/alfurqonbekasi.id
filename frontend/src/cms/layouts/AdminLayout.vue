@@ -239,9 +239,9 @@ onUnmounted(() => {
   unmountMetronic();
 });
 
-function logout(): void {
+async function logout(): Promise<void> {
   userMenuOpen.value = false;
-  auth.logout();
+  await auth.logout();
   void router.replace({ name: "login" });
 }
 </script>

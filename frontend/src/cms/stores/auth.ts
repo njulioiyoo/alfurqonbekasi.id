@@ -1,13 +1,6 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { decryptAdminSessionPayload, encryptAdminSessionPayload } from "../utils/session-crypto.js";
-
-/** Blob terenkripsi AES-GCM — tidak menyimpan token/user plaintext di Application. */
-const SESSION_BLOB_KEY = "alfurqon_admin_session";
-
-/** Migrasi sekali dari format lama (plaintext). */
-const LEGACY_TOKEN_KEY = "alfurqon_admin_token";
-const LEGACY_USER_KEY = "alfurqon_admin_user";
+import { getJson, postJson } from "../api/http.js";
 
 export type SessionUser = {
   id: string;
@@ -16,104 +9,62 @@ export type SessionUser = {
   role: string;
 };
 
-type SessionPayload = {
-  token: string;
-  user: SessionUser;
+type MeResponse = {
+  ok: boolean;
+  data?: {
+    id: string;
+    email: string;
+    fullName: string | null;
+    role: string;
+  };
 };
 
-/** Hindari dekripsi berulang jika blob tidak berubah (navigasi router). */
-let cachedBlobFingerprint: string | null = null;
+function mapMe(data: MeResponse["data"]): SessionUser | null {
+  if (!data) return null;
+  return {
+    id: data.id,
+    email: data.email,
+    fullName: data.fullName,
+    role: data.role,
+  };
+}
 
 export const useAuthStore = defineStore("auth", () => {
-  const token = ref("");
   const user = ref<SessionUser | null>(null);
+  const hydrated = ref(false);
 
-  const isAuthenticated = computed(() => Boolean(token.value));
-
-  async function persistEncrypted(): Promise<void> {
-    if (!token.value || !user.value) {
-      return;
-    }
-    const payload: SessionPayload = { token: token.value, user: user.value };
-    const blob = await encryptAdminSessionPayload(JSON.stringify(payload));
-    sessionStorage.setItem(SESSION_BLOB_KEY, blob);
-    sessionStorage.removeItem(LEGACY_TOKEN_KEY);
-    sessionStorage.removeItem(LEGACY_USER_KEY);
-    cachedBlobFingerprint = blob;
-  }
-
-  async function tryMigrateLegacyPlain(): Promise<void> {
-    const t = sessionStorage.getItem(LEGACY_TOKEN_KEY);
-    const u = sessionStorage.getItem(LEGACY_USER_KEY);
-    if (!t || !u) {
-      return;
-    }
-    try {
-      const parsed = JSON.parse(u) as SessionUser;
-      token.value = t;
-      user.value = parsed;
-      await persistEncrypted();
-    } catch {
-      sessionStorage.removeItem(LEGACY_TOKEN_KEY);
-      sessionStorage.removeItem(LEGACY_USER_KEY);
-    }
-  }
+  const isAuthenticated = computed(() => Boolean(user.value));
 
   async function hydrate(): Promise<void> {
-    const blob = sessionStorage.getItem(SESSION_BLOB_KEY);
-
-    if (blob && blob === cachedBlobFingerprint && token.value) {
-      return;
-    }
-
-    if (!blob) {
-      token.value = "";
-      user.value = null;
-      cachedBlobFingerprint = null;
-      await tryMigrateLegacyPlain();
-      cachedBlobFingerprint = sessionStorage.getItem(SESSION_BLOB_KEY);
-      return;
-    }
-
     try {
-      const json = await decryptAdminSessionPayload(blob);
-      const payload = JSON.parse(json) as SessionPayload;
-      if (!payload.token || !payload.user) {
-        throw new Error("invalid payload");
-      }
-      token.value = payload.token;
-      user.value = payload.user;
-      cachedBlobFingerprint = blob;
-      sessionStorage.removeItem(LEGACY_TOKEN_KEY);
-      sessionStorage.removeItem(LEGACY_USER_KEY);
+      const json = await getJson<MeResponse>("/auth/me");
+      user.value = json.ok && json.data ? mapMe(json.data) : null;
     } catch {
-      token.value = "";
       user.value = null;
-      sessionStorage.removeItem(SESSION_BLOB_KEY);
-      cachedBlobFingerprint = null;
-      await tryMigrateLegacyPlain();
-      cachedBlobFingerprint = sessionStorage.getItem(SESSION_BLOB_KEY);
+    } finally {
+      hydrated.value = true;
     }
   }
 
-  async function login(accessToken: string, u: SessionUser): Promise<void> {
-    token.value = accessToken;
+  function login(u: SessionUser): void {
     user.value = u;
-    await persistEncrypted();
+    hydrated.value = true;
   }
 
-  function logout(): void {
-    token.value = "";
-    user.value = null;
-    sessionStorage.removeItem(SESSION_BLOB_KEY);
-    sessionStorage.removeItem(LEGACY_TOKEN_KEY);
-    sessionStorage.removeItem(LEGACY_USER_KEY);
-    cachedBlobFingerprint = null;
+  async function logout(): Promise<void> {
+    try {
+      await postJson("/auth/logout", {});
+    } catch {
+      /* cookie tetap dibersihkan di client state */
+    } finally {
+      user.value = null;
+      hydrated.value = true;
+    }
   }
 
   return {
-    token,
     user,
+    hydrated,
     isAuthenticated,
     login,
     logout,

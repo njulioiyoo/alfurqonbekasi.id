@@ -18,10 +18,21 @@ function required(name: string): string {
   return v;
 }
 
+const nodeEnv = process.env.NODE_ENV || "development";
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv,
   databaseUrl: required("DATABASE_URL"),
   jwtSecret: required("JWT_SECRET"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  /** Cookie httpOnly `auth-credentials` — domain opsional (mis. `.alfurqonbekasi.id`). */
+  authCookieDomain: process.env.AUTH_COOKIE_DOMAIN?.trim() || undefined,
+  authCookieSecure:
+    process.env.AUTH_COOKIE_SECURE === "true" ||
+    (process.env.AUTH_COOKIE_SECURE !== "false" && nodeEnv === "production"),
+  authCookieSameSite: (process.env.AUTH_COOKIE_SAMESITE?.trim().toLowerCase() || "lax") as
+    | "strict"
+    | "lax"
+    | "none",
 };

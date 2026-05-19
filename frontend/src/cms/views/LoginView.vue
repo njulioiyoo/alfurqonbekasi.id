@@ -79,7 +79,7 @@ async function onSubmitSignin(): Promise<void> {
       errorMsg.value = res.error?.message || "Incorrect username or password. Please try again.";
       return;
     }
-    await auth.login(res.data.accessToken, res.data.user);
+    auth.login(res.data.user);
     const redir = typeof route.query.redirect === "string" ? route.query.redirect : "";
     await router.replace(redir.startsWith("/") ? redir : { name: "dashboard" });
   } catch {

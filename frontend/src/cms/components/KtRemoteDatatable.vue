@@ -2,7 +2,6 @@
 import { inject, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, toRaw, watch } from "vue";
 import { apiUrl } from "../api/http.js";
 import { ADMIN_SHELL_READY } from "../injectionKeys.js";
-import { useAuthStore } from "../stores/auth.js";
 import {
   getKtdatatableBodyExtraForAjaxUrl,
   registerKtdatatableBodyExtra,
@@ -91,7 +90,6 @@ const props = withDefaults(
   }
 );
 
-const auth = useAuthStore();
 const adminShellReady = inject(ADMIN_SHELL_READY) ?? ref(false);
 
 const rootRef = ref<HTMLElement | null>(null);
@@ -123,10 +121,7 @@ function mountKt(): boolean {
         read: {
           url: apiUrl(props.readPath),
           map: mapRemoteDatatableRows,
-          beforeSend(jqXHR: { setRequestHeader?: (n: string, v: string) => void }) {
-            const t = auth.token ?? "";
-            if (t) jqXHR.setRequestHeader?.("Authorization", `Bearer ${t}`);
-          },
+          xhrFields: { withCredentials: true },
         },
       },
       pageSize: props.pageSize,

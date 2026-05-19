@@ -1,9 +1,11 @@
 import { CMS_ACCESS_DENIED_MESSAGE } from "../constants/access-messages.js";
-import { useAuthStore } from "../stores/auth.js";
 import { isApiForbidden } from "../utils/api-error.js";
 import { toastError } from "../utils/toast.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+
+/** Kirim cookie httpOnly `auth-credentials` — tidak pakai Authorization / localStorage. */
+const FETCH_CREDENTIALS: RequestCredentials = "include";
 
 async function readJson<T>(res: Response): Promise<T> {
   const data = (await res.json()) as T;
@@ -18,50 +20,44 @@ export function apiUrl(path: string): string {
   return `${API_BASE.replace(/\/$/, "")}${p}`;
 }
 
-function authHeaders(): Headers {
+function jsonHeaders(): Headers {
   const headers = new Headers();
-  const auth = useAuthStore();
-  if (auth.token) {
-    headers.set("Authorization", `Bearer ${auth.token}`);
-  }
+  headers.set("Content-Type", "application/json");
   return headers;
 }
 
 export async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), {
-    headers: authHeaders(),
+    credentials: FETCH_CREDENTIALS,
   });
   return readJson<T>(res);
 }
 
 export async function postJson<T>(path: string, json: unknown): Promise<T> {
-  const headers = authHeaders();
-  headers.set("Content-Type", "application/json");
   const res = await fetch(apiUrl(path), {
     method: "POST",
-    headers,
+    headers: jsonHeaders(),
+    credentials: FETCH_CREDENTIALS,
     body: JSON.stringify(json),
   });
   return readJson<T>(res);
 }
 
 export async function patchJson<T>(path: string, json: unknown): Promise<T> {
-  const headers = authHeaders();
-  headers.set("Content-Type", "application/json");
   const res = await fetch(apiUrl(path), {
     method: "PATCH",
-    headers,
+    headers: jsonHeaders(),
+    credentials: FETCH_CREDENTIALS,
     body: JSON.stringify(json),
   });
   return readJson<T>(res);
 }
 
 export async function putJson<T>(path: string, json: unknown): Promise<T> {
-  const headers = authHeaders();
-  headers.set("Content-Type", "application/json");
   const res = await fetch(apiUrl(path), {
     method: "PUT",
-    headers,
+    headers: jsonHeaders(),
+    credentials: FETCH_CREDENTIALS,
     body: JSON.stringify(json),
   });
   return readJson<T>(res);
@@ -70,7 +66,7 @@ export async function putJson<T>(path: string, json: unknown): Promise<T> {
 export async function deleteJson<T>(path: string): Promise<T> {
   const res = await fetch(apiUrl(path), {
     method: "DELETE",
-    headers: authHeaders(),
+    credentials: FETCH_CREDENTIALS,
   });
   return readJson<T>(res);
 }
@@ -78,7 +74,7 @@ export async function deleteJson<T>(path: string): Promise<T> {
 export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(apiUrl(path), {
     method: "POST",
-    headers: authHeaders(),
+    credentials: FETCH_CREDENTIALS,
     body: formData,
   });
   return readJson<T>(res);

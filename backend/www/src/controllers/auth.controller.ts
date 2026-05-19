@@ -4,6 +4,7 @@ import type { AuthedRequest } from "../middleware/auth.middleware.js";
 import { findUserByEmail, findUserById } from "../services/user.service.js";
 import { verifyPassword } from "../utils/password.js";
 import { signAccessToken } from "../utils/jwt.js";
+import { clearAuthCredentialsCookie, setAuthCredentialsCookie } from "../utils/auth-cookie.js";
 import { visibleMenuItemsForAbility } from "../services/menu.service.js";
 
 const loginSchema = z.object({
@@ -47,6 +48,7 @@ export async function login(req: AuthedRequest, res: Response): Promise<void> {
       email: user.email,
       role: user.role,
     });
+    setAuthCredentialsCookie(res, accessToken);
     res.json({
       ok: true,
       data: {
@@ -57,7 +59,6 @@ export async function login(req: AuthedRequest, res: Response): Promise<void> {
           role: user.role,
           createdAt: user.created_at,
         },
-        accessToken,
       },
     });
   } catch (e) {
@@ -67,6 +68,11 @@ export async function login(req: AuthedRequest, res: Response): Promise<void> {
       error: { code: "INTERNAL_ERROR", message: "Terjadi kesalahan server" },
     });
   }
+}
+
+export async function logout(_req: AuthedRequest, res: Response): Promise<void> {
+  clearAuthCredentialsCookie(res);
+  res.json({ ok: true, data: { loggedOut: true } });
 }
 
 export async function me(req: AuthedRequest, res: Response): Promise<void> {

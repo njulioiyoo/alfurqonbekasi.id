@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "sh scripts/verify-metronic-assets.sh && vite build",
     "preview": "vite preview",
-    "copy:metronic": "sh scripts/copy-metronic-assets.sh"
+    "copy:metronic": "sh scripts/copy-metronic-assets.sh",
+    "deploy:server": "sh scripts/deploy-to-server.sh",
+    "pack:metronic": "tar -czf metronic-bundle.tgz -C dist metronic"
   },
   "dependencies": {
     "pinia": "^3.0.4",

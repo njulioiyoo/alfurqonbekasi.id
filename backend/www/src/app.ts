@@ -1,4 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from "express";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import { authRouter } from "./routes/auth.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
@@ -32,6 +33,7 @@ export function createApp(): express.Application {
       credentials: true,
     })
   );
+  app.use(cookieParser());
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
   app.use(wrapAsync(rateLimitMiddleware));

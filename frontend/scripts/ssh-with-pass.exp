@@ -1,0 +1,24 @@
+#!/usr/bin/expect -f
+set timeout 900
+if {![info exists env(DEPLOY_SSH_PASS)]} {
+  puts stderr "DEPLOY_SSH_PASS tidak diset"
+  exit 1
+}
+set password $env(DEPLOY_SSH_PASS)
+set cmd $env(DEPLOY_SSH_CMD)
+eval spawn {*}[split $cmd]
+expect {
+  -re "(?i)password:" {
+    send "$password\r"
+    exp_continue
+  }
+  "(yes/no)" {
+    send "yes\r"
+    exp_continue
+  }
+  eof
+}
+catch wait result
+set code [lindex $result 3]
+if {$code == ""} { set code 0 }
+exit $code
