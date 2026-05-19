@@ -8,8 +8,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: "", name: "home", component: () => import("./views/HomeView.vue"), meta: { title: "Beranda" } },
 
-      { path: "jadwal-kajian", name: "jadwal-kajian", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Jadwal Kajian" } },
-      { path: "jadwal-petugas", name: "jadwal-petugas", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Jadwal Petugas Ibadah" } },
+      { path: "jadwal-kajian", name: "jadwal-kajian", component: () => import("./views/JadwalKajianView.vue"), meta: { title: "Jadwal Kajian" } },
+      { path: "jadwal-petugas", name: "jadwal-petugas", component: () => import("./views/JadwalPetugasView.vue"), meta: { title: "Jadwal Petugas Ibadah" } },
       { path: "pendaftaran-event", name: "pendaftaran-event", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Pendaftaran Event" } },
 
       { path: "layanan-jenazah", name: "layanan-jenazah", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Layanan Jenazah" } },

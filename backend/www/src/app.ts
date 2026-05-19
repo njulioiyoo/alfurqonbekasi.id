@@ -1,10 +1,22 @@
-import express, { type Request, type Response } from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import { authRouter } from "./routes/auth.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
 import * as publicConfigController from "./controllers/public-config.controller.js";
 import * as publicContactController from "./controllers/public-contact.controller.js";
+import * as publicContentController from "./controllers/public-content.controller.js";
+import { maintenanceMiddleware } from "./middleware/maintenance.middleware.js";
+import { publicCacheMiddleware } from "./middleware/public-cache.middleware.js";
+import { rateLimitMiddleware } from "./middleware/rate-limit.middleware.js";
 import { uploadsRootDir } from "./utils/uploads-path.js";
+
+function wrapAsync(
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
+): (req: Request, res: Response, next: NextFunction) => void {
+  return (req, res, next) => {
+    void fn(req, res, next).catch(next);
+  };
+}
 
 function sendHealth(_req: Request, res: Response): void {
   res.json({ ok: true, data: { service: "alfurqon-masjid-api", ts: new Date().toISOString() } });
@@ -22,6 +34,9 @@ export function createApp(): express.Application {
   );
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+  app.use(wrapAsync(rateLimitMiddleware));
+  app.use(wrapAsync(maintenanceMiddleware));
+  app.use(wrapAsync(publicCacheMiddleware));
   app.use("/uploads", express.static(uploadsRoot, { maxAge: "1d" }));
   app.use("/api/uploads", express.static(uploadsRoot, { maxAge: "1d" }));
 
@@ -35,6 +50,9 @@ export function createApp(): express.Application {
   });
   api.post("/public/contact", (req, res, next) => {
     void publicContactController.postPublicContact(req, res).catch(next);
+  });
+  api.get("/public/content/:type", (req, res, next) => {
+    void publicContentController.getPublicContentByType(req, res).catch(next);
   });
   api.use("/auth", authRouter);
   api.use("/admin", adminRouter);
@@ -52,6 +70,9 @@ export function createApp(): express.Application {
   });
   app.post("/public/contact", (req, res, next) => {
     void publicContactController.postPublicContact(req, res).catch(next);
+  });
+  app.get("/public/content/:type", (req, res, next) => {
+    void publicContentController.getPublicContentByType(req, res).catch(next);
   });
 
   app.use(

@@ -72,7 +72,6 @@ const form = ref({
   visi: "",
   misi: "",
   maintenanceMode: false,
-  allowPublicRegistration: false,
   cacheTtlSeconds: 300,
   rateLimitPerMinute: 120,
 });
@@ -243,7 +242,6 @@ const configKeys = [
   "visi",
   "misi",
   "maintenanceMode",
-  "allowPublicRegistration",
   "cacheTtlSeconds",
   "rateLimitPerMinute",
 ] as const;
@@ -405,7 +403,7 @@ async function loadConfig(): Promise<void> {
     for (const key of configKeys) {
       const raw = values[key];
       if (raw === undefined) continue;
-      if (key === "seoIndexing" || key === "maintenanceMode" || key === "allowPublicRegistration") {
+      if (key === "seoIndexing" || key === "maintenanceMode") {
         (form.value[key] as boolean) = readBool(raw, form.value[key] as boolean);
         continue;
       }
@@ -941,34 +939,30 @@ onUnmounted(() => {
           </div>
 
           <div v-else class="row">
-            <div class="col-lg-6">
+            <div class="col-lg-12">
               <div class="kt-checkbox-inline kt-margin-b-15">
                 <label class="kt-checkbox">
                   <input v-model="form.maintenanceMode" type="checkbox" />
                   Maintenance Mode
                   <span></span>
                 </label>
-              </div>
-            </div>
-            <div class="col-lg-6">
-              <div class="kt-checkbox-inline kt-margin-b-15">
-                <label class="kt-checkbox">
-                  <input v-model="form.allowPublicRegistration" type="checkbox" />
-                  Izinkan Registrasi Publik
-                  <span></span>
-                </label>
+                <span class="form-text text-muted d-block kt-margin-t-5">
+                  Jika aktif, website utama menampilkan halaman pemeliharaan dan formulir kontak dinonaktifkan.
+                </span>
               </div>
             </div>
             <div class="col-lg-6">
               <div class="form-group">
                 <label>Cache TTL (detik)</label>
                 <input v-model.number="form.cacheTtlSeconds" type="number" min="0" class="form-control" />
+                <span class="form-text text-muted">Header cache untuk <code>GET /public/config</code>. 0 = tanpa cache.</span>
               </div>
             </div>
             <div class="col-lg-6">
               <div class="form-group">
                 <label>Rate Limit / Menit</label>
                 <input v-model.number="form.rateLimitPerMinute" type="number" min="1" class="form-control" />
+                <span class="form-text text-muted">Maks. request per IP per menit (kecuali health &amp; upload statis).</span>
               </div>
             </div>
           </div>

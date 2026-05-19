@@ -500,10 +500,6 @@ function logout(): void {
                       <span class="kt-subheader__btn-daterange-date">{{ shortDate }}</span>
                       <i class="flaticon2-calendar-1"></i>
                     </a>
-                    <a href="#" class="btn kt-subheader__btn-primary btn-icon" @click.prevent><i class="flaticon2-file"></i></a>
-                    <a href="#" class="btn kt-subheader__btn-primary btn-icon" @click.prevent><i class="flaticon-download-1"></i></a>
-                    <a href="#" class="btn kt-subheader__btn-primary btn-icon" @click.prevent><i class="flaticon2-fax"></i></a>
-                    <a href="#" class="btn kt-subheader__btn-primary btn-icon" @click.prevent><i class="flaticon2-settings"></i></a>
                   </div>
                 </div>
               </div>

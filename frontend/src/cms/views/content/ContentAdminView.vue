@@ -67,6 +67,13 @@ const GALLERY_IMAGE_WIDTH = 390;
 const GALLERY_IMAGE_HEIGHT = 353;
 const GALLERY_IMAGE_SIZE_HINT = `Ukuran wajib tepat ${GALLERY_IMAGE_WIDTH}×${GALLERY_IMAGE_HEIGHT} px (JPEG, PNG, atau WebP).`;
 const galleryCoverAccept = "image/jpeg,image/png,image/webp";
+
+const EVENT_COVER_WIDTH = 870;
+const EVENT_COVER_HEIGHT = 400;
+const EVENT_THUMB_WIDTH = 350;
+const EVENT_THUMB_HEIGHT = 280;
+const EVENT_COVER_SIZE_HINT = `Satu gambar untuk web: minimal ${EVENT_COVER_WIDTH}×${EVENT_COVER_HEIGHT} px (rasio ±15%). Tampil sebagai thumbnail ${EVENT_THUMB_WIDTH}×${EVENT_THUMB_HEIGHT} dan detail ${EVENT_COVER_WIDTH}×${EVENT_COVER_HEIGHT}. Format JPEG, PNG, atau WebP.`;
+const eventCoverAccept = "image/jpeg,image/png,image/webp";
 const isOperationalScheduleMode = computed(() => isScheduleMode.value || isPrayerStaffMode.value);
 
 const canCreateContent = computed(() =>
@@ -104,6 +111,9 @@ const datatableSearchPlaceholder = computed(() => {
   return "Cari judul kegiatan, slug…";
 });
 const datatableMergeBody = computed(() => ({ contentType: props.fixedType }));
+const datatableReadPath = computed(
+  () => `/admin/content/datatable?contentType=${encodeURIComponent(props.fixedType)}`
+);
 const datatableTableId = computed(() => `content_datatable_${props.fixedType}`);
 
 const contentColumns = computed((): unknown[] => {
@@ -272,6 +282,27 @@ async function validateGalleryImageFile(file: File): Promise<string | null> {
     const { width, height } = await readImageFileDimensions(file);
     if (width === GALLERY_IMAGE_WIDTH && height === GALLERY_IMAGE_HEIGHT) return null;
     return `Gambar galeri wajib berukuran tepat ${GALLERY_IMAGE_WIDTH}×${GALLERY_IMAGE_HEIGHT} piksel. Ukuran terdeteksi: ${width}×${height}.`;
+  } catch {
+    return "Tidak dapat membaca ukuran gambar. Pastikan file gambar valid.";
+  }
+}
+
+async function validateEventCoverImageFile(file: File): Promise<string | null> {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) {
+    return "Gambar kegiatan hanya mendukung format JPEG, PNG, atau WebP.";
+  }
+  try {
+    const { width, height } = await readImageFileDimensions(file);
+    if (width < EVENT_COVER_WIDTH || height < EVENT_COVER_HEIGHT) {
+      return `Gambar kegiatan minimal ${EVENT_COVER_WIDTH}×${EVENT_COVER_HEIGHT} piksel. Ukuran terdeteksi: ${width}×${height}.`;
+    }
+    const ratio = width / height;
+    const target = EVENT_COVER_WIDTH / EVENT_COVER_HEIGHT;
+    if (Math.abs(ratio - target) > 0.15) {
+      return `Rasio gambar disarankan ${EVENT_COVER_WIDTH}:${EVENT_COVER_HEIGHT} (±15%). Ukuran terdeteksi: ${width}×${height}.`;
+    }
+    return null;
   } catch {
     return "Tidak dapat membaca ukuran gambar. Pastikan file gambar valid.";
   }
@@ -668,11 +699,19 @@ async function onPickCover(ev: Event): Promise<void> {
       toastError(dimErr);
       return;
     }
+  } else if (isScheduleMode.value) {
+    const dimErr = await validateEventCoverImageFile(file);
+    if (dimErr) {
+      err.value = dimErr;
+      toastError(dimErr);
+      return;
+    }
   }
   uploadingImage.value = true;
   toastLoading("Mengupload gambar…");
   try {
-    const json = await uploadAdminImage(file, isGalleryMode.value ? { context: "gallery" } : undefined);
+    const uploadContext = isGalleryMode.value ? "gallery" : isScheduleMode.value ? "event_cover" : undefined;
+    const json = await uploadAdminImage(file, uploadContext ? { context: uploadContext } : undefined);
     if (!json.ok || !json.data?.url) {
       err.value = json.error?.message || "Upload gambar gagal";
       toastError(err.value);
@@ -792,7 +831,7 @@ onBeforeUnmount(() => {
             :key="props.fixedType"
             ref="tableRef"
             :table-id="datatableTableId"
-            read-path="/admin/content/datatable"
+            :read-path="datatableReadPath"
             :search-placeholder="datatableSearchPlaceholder"
             :search-hint="datatableSearchHint"
             :merge-request-body="datatableMergeBody"
@@ -844,14 +883,14 @@ onBeforeUnmount(() => {
                     <div class="col-12">
                       <h6 class="kt-font-bold kt-font-transform-u text-muted">Gambar / poster</h6>
                       <div class="form-group">
-                        <label>Cover (opsional)</label>
+                        <label>{{ isScheduleMode ? "Poster kegiatan (opsional)" : "Cover (opsional)" }}</label>
                         <input v-model="form.coverImageUrl" type="text" class="form-control" readonly placeholder="URL gambar setelah upload" />
                         <div class="custom-file kt-margin-t-10">
                           <input
                             id="content_schedule_cover_upload"
                             type="file"
                             class="custom-file-input"
-                            accept="image/*"
+                            :accept="isScheduleMode ? eventCoverAccept : 'image/*'"
                             :disabled="uploadingImage"
                             @change="onPickCover"
                           />
@@ -859,7 +898,20 @@ onBeforeUnmount(() => {
                             {{ uploadingImage ? "Mengupload gambar..." : "Pilih gambar cover / poster" }}
                           </label>
                         </div>
-                        <div class="cms-cover-preview kt-margin-t-10">
+                        <template v-if="isScheduleMode">
+                          <p class="form-text text-muted kt-margin-t-10 mb-2">{{ EVENT_COVER_SIZE_HINT }}</p>
+                          <div class="cms-event-cover-previews">
+                            <div class="cms-cover-preview cms-cover-preview--event-thumb">
+                              <span class="cms-cover-preview-label">Thumbnail {{ EVENT_THUMB_WIDTH }}×{{ EVENT_THUMB_HEIGHT }}</span>
+                              <img :src="coverPreviewUrl" alt="Pratinjau thumbnail" />
+                            </div>
+                            <div class="cms-cover-preview cms-cover-preview--event-detail">
+                              <span class="cms-cover-preview-label">Detail {{ EVENT_COVER_WIDTH }}×{{ EVENT_COVER_HEIGHT }}</span>
+                              <img :src="coverPreviewUrl" alt="Pratinjau detail" />
+                            </div>
+                          </div>
+                        </template>
+                        <div v-else class="cms-cover-preview kt-margin-t-10">
                           <img :src="coverPreviewUrl" alt="Cover preview" />
                         </div>
                         <span class="form-text text-muted">Disimpan di <code>cover_image_url</code>.</span>
@@ -1121,6 +1173,54 @@ onBeforeUnmount(() => {
 
 .cms-cover-preview--gallery img {
   object-fit: cover;
+}
+
+.cms-event-cover-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.cms-cover-preview-label {
+  display: block;
+  width: 100%;
+  font-size: 0.75rem;
+  color: #6c7293;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.cms-cover-preview--event-thumb {
+  width: 350px;
+  max-width: 100%;
+  min-height: 280px;
+  max-height: 280px;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.cms-cover-preview--event-thumb img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.cms-cover-preview--event-detail {
+  width: 100%;
+  max-width: 870px;
+  min-height: 400px;
+  max-height: 400px;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.cms-cover-preview--event-detail img {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  object-position: center;
 }
 
 #cms_modal_content_form .modal-body {

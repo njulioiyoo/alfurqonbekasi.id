@@ -6,6 +6,9 @@ import { getPublicConfig, type SiteConfig } from "../api.js";
 
 const B = "/bismillah/assets";
 const cfg = ref<SiteConfig | null>(null);
+const configReady = ref(false);
+
+const maintenanceActive = computed(() => cfg.value?.maintenanceMode === true);
 
 const siteName = computed(() => cfg.value?.websiteName || "Masjid Alfurqon Bekasi");
 const phone = computed(() => cfg.value?.adminPhone || "");
@@ -59,10 +62,7 @@ const displayRspnEmail = computed(() => email.value || "info@bismillah.com");
 
 const year = computed(() => new Date().getFullYear());
 
-onMounted(async () => {
-  void getPublicConfig().then((c) => { cfg.value = c; });
-
-  await nextTick();
+function hidePreloader(): void {
   const $ = (window as unknown as Record<string, unknown>).jQuery as
     | ((sel: string) => { fadeOut?: (speed: string) => void })
     | undefined;
@@ -72,6 +72,14 @@ onMounted(async () => {
     const el = document.querySelector(".preloader") as HTMLElement | null;
     if (el) el.style.display = "none";
   }
+}
+
+onMounted(async () => {
+  cfg.value = await getPublicConfig();
+  configReady.value = true;
+
+  await nextTick();
+  hidePreloader();
 });
 </script>
 
@@ -84,7 +92,32 @@ onMounted(async () => {
     </div>
   </div>
 
-  <main>
+  <main v-if="configReady && maintenanceActive" class="site-maintenance">
+    <section class="site-maintenance-hero">
+      <div class="container text-center">
+        <div class="site-maintenance-logo">
+          <img :src="logoUrl" :alt="siteName" />
+        </div>
+        <h1>{{ siteName }}</h1>
+        <p class="site-maintenance-lead">Situs sedang dalam pemeliharaan</p>
+        <p class="site-maintenance-desc">
+          Kami sedang melakukan perbaikan singkat. Silakan kembali lagi nanti.
+        </p>
+        <ul v-if="phone || email" class="site-maintenance-contact">
+          <li v-if="phone">
+            <i class="flaticon-phone-volume theme-clr"></i>
+            <span>{{ phone }}</span>
+          </li>
+          <li v-if="email">
+            <i class="far fa-envelope theme-clr"></i>
+            <a :href="`mailto:${email}`">{{ email }}</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <main v-else-if="configReady">
     <header class="style2">
       <div class="topbar">
         <div class="container">
@@ -257,7 +290,6 @@ onMounted(async () => {
                       <li><RouterLink :to="{ name: 'donasi' }">Donasi / Ziswaf</RouterLink></li>
                       <li><RouterLink :to="{ name: 'laporan-keuangan' }">Laporan Keuangan</RouterLink></li>
                       <li><RouterLink :to="{ name: 'kontak' }">Kontak</RouterLink></li>
-                      <li><a href="/admin/">Panel CMS</a></li>
                     </ul>
                   </div>
                 </div>
@@ -341,5 +373,55 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+.site-maintenance {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+}
+
+.site-maintenance-hero {
+  width: 100%;
+  padding: 60px 20px;
+}
+
+.site-maintenance-logo img {
+  max-height: 90px;
+  margin-bottom: 24px;
+}
+
+.site-maintenance h1 {
+  font-size: 1.75rem;
+  margin-bottom: 12px;
+}
+
+.site-maintenance-lead {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--theme-clr, #c9a227);
+  margin-bottom: 8px;
+}
+
+.site-maintenance-desc {
+  color: #666;
+  max-width: 480px;
+  margin: 0 auto 24px;
+}
+
+.site-maintenance-contact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.site-maintenance-contact li {
+  margin: 8px 0;
+}
+
+.site-maintenance-contact i {
+  margin-right: 8px;
 }
 </style>

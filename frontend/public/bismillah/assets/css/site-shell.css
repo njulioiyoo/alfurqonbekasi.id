@@ -23,3 +23,61 @@ header.style2 .logo-inf-sec .logo > a > img {
   height: auto;
   object-fit: contain;
 }
+
+/* Countdown selesai: struktur ul sama, label overlay di tengah */
+.event-thmb .countdown.is-ended > li {
+  opacity: 0.35;
+}
+
+.event-thmb .countdown.is-ended::after {
+  content: "Kegiatan selesai";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Jadwal petugas (team.html): teks putih saat hover hijau */
+.team-bx:hover .team-inf > h5,
+.team-bx:hover .team-inf > span,
+.team-bx:hover .team-inf > h5 a,
+.team-bx:hover .team-inf p.site-staff-schedule-date,
+.team-bx:hover .team-inf p.site-staff-backup,
+.team-bx:hover .team-inf p.site-staff-excerpt {
+  color: #fff;
+}
+
+.team-bx:hover .team-inf .scl1 > a {
+  color: #fff;
+}
+
+/* Jadwal kajian: satu cover → crop thumbnail 350×280 & detail 870×400 */
+.event-bx2 .event-thmb > a {
+  display: block;
+  overflow: hidden;
+}
+
+.event-bx2 .event-thmb img {
+  width: 100%;
+  height: 280px;
+  max-height: 280px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.event-detail-img img,
+.site-event-detail-cover {
+  width: 100%;
+  max-width: 870px;
+  height: 400px;
+  max-height: 400px;
+  object-fit: cover;
+  object-position: center;
+}

@@ -2,6 +2,7 @@ import type { Response } from "express";
 import { z } from "zod";
 import type { AuthedRequest } from "../middleware/auth.middleware.js";
 import { listConfigEntries, upsertConfigEntries } from "../services/config.service.js";
+import { getRuntimeConfig, invalidateRuntimeConfigCache } from "../services/runtime-config.service.js";
 
 const configMapSchema = z.record(z.string().trim().min(1).max(150), z.union([z.string(), z.number(), z.boolean()]));
 const putConfigBodySchema = z.object({
@@ -38,6 +39,8 @@ export async function putConfig(req: AuthedRequest, res: Response): Promise<void
       value: String(value),
     }));
     await upsertConfigEntries(entries);
+    invalidateRuntimeConfigCache();
+    await getRuntimeConfig();
     res.json({ ok: true });
   } catch (e) {
     console.error(e);

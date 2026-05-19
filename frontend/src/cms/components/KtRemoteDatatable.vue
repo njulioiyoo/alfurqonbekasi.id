@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from "vue";
+import { inject, nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, toRaw, watch } from "vue";
 import { apiUrl } from "../api/http.js";
 import { ADMIN_SHELL_READY } from "../injectionKeys.js";
 import { useAuthStore } from "../stores/auth.js";
@@ -111,6 +111,8 @@ function mountKt(): boolean {
   const $ = jq();
   const el = rootRef.value;
   if (!$?.fn?.KTDatatable || !el) return false;
+
+  syncMergeExtras();
 
   ensureAdminDatatableJsonPrefilter($ as { ajaxPrefilter?: (fn: (o: Record<string, unknown>) => void) => void });
 
@@ -259,10 +261,22 @@ watch(
   { deep: true }
 );
 
+onBeforeMount(() => {
+  syncMergeExtras();
+});
+
 onMounted(() => {
   syncMergeExtras();
   scheduleMount();
 });
+
+watch(
+  () => props.readPath,
+  () => {
+    syncMergeExtras();
+    if (ktInitialized) reload();
+  }
+);
 
 onBeforeUnmount(() => {
   unregisterExtras?.();

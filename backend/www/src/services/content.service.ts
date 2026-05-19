@@ -1,4 +1,5 @@
 import { pool } from "../db/pool.js";
+import { comparePublicEvents, comparePublicPrayerStaff } from "../utils/event-datetime.js";
 
 export type ContentListRow = {
   id: string;
@@ -233,4 +234,105 @@ export async function updateContent(
 export async function deleteContent(id: string): Promise<boolean> {
   const r = await pool.query(`DELETE FROM content_items WHERE id = $1`, [id]);
   return (r.rowCount ?? 0) > 0;
+}
+
+export type PublicContentRow = {
+  id: string;
+  type: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  cover_image_url: string | null;
+  published_at: Date | null;
+  sort_order: number;
+  is_featured: boolean;
+  attr_1: string | null;
+  attr_2: string | null;
+  attr_3: string | null;
+  attr_4: string | null;
+  attr_5: string | null;
+};
+
+/** Konten terpublikasi untuk website (tanpa auth). */
+export async function listPublishedContentByType(type: string): Promise<PublicContentRow[]> {
+  const r = await listPublishedContentByTypePaginated(type, 1, 100);
+  return r.items;
+}
+
+export async function listPublishedContentByTypePaginated(
+  type: string,
+  page: number,
+  limit: number
+): Promise<{ items: PublicContentRow[]; total: number; page: number; limit: number }> {
+  const safeLimit = Math.min(Math.max(limit, 1), 24);
+  const safePage = Math.max(page, 1);
+  const offset = (safePage - 1) * safeLimit;
+
+  const countR = await pool.query<{ total: string }>(
+    `SELECT COUNT(*)::text AS total FROM content_items WHERE type = $1 AND status = 'published'`,
+    [type]
+  );
+  const total = Number(countR.rows[0]?.total ?? 0);
+
+  const selectSql = `SELECT id, type, title, slug, excerpt, cover_image_url, published_at, sort_order, is_featured,
+            attr_1, attr_2, attr_3, attr_4, attr_5
+     FROM content_items
+     WHERE type = $1 AND status = 'published'`;
+
+  if (type === "event") {
+    const allR = await pool.query<PublicContentRow>(selectSql, [type]);
+    const sorted = [...allR.rows].sort(comparePublicEvents);
+    return {
+      items: sorted.slice(offset, offset + safeLimit),
+      total,
+      page: safePage,
+      limit: safeLimit,
+    };
+  }
+
+  if (type === "prayer_staff") {
+    const allR = await pool.query<PublicContentRow>(selectSql, [type]);
+    const sorted = [...allR.rows].sort(comparePublicPrayerStaff);
+    return {
+      items: sorted.slice(offset, offset + safeLimit),
+      total,
+      page: safePage,
+      limit: safeLimit,
+    };
+  }
+
+  const r = await pool.query<PublicContentRow>(
+    `${selectSql}
+     ORDER BY sort_order ASC, published_at DESC NULLS LAST, title ASC
+     LIMIT $2 OFFSET $3`,
+    [type, safeLimit, offset]
+  );
+
+  return { items: r.rows, total, page: safePage, limit: safeLimit };
+}
+
+export type ContentStatusCounts = {
+  published: number;
+  draft: number;
+  archived: number;
+  all: number;
+};
+
+export async function countContentByTypeAndStatus(type: string): Promise<ContentStatusCounts> {
+  const r = await pool.query<{ status: string; c: string }>(
+    `SELECT status, COUNT(*)::text AS c
+     FROM content_items
+     WHERE type = $1
+     GROUP BY status`,
+    [type]
+  );
+  const counts: ContentStatusCounts = { published: 0, draft: 0, archived: 0, all: 0 };
+  for (const row of r.rows) {
+    const n = Number(row.c) || 0;
+    counts.all += n;
+    if (row.status === "published") counts.published = n;
+    else if (row.status === "draft") counts.draft = n;
+    else if (row.status === "archived") counts.archived = n;
+  }
+  return counts;
 }

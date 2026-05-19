@@ -27,6 +27,7 @@ const PUBLIC_KEYS = new Set([
   "visi",
   "misi",
   "homeBannersJson",
+  "maintenanceMode",
 ]);
 
 export async function getPublicConfig(_req: Request, res: Response): Promise<void> {

@@ -2,8 +2,97 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { getPublicConfig, type HomeBannerSlide, type SiteConfig } from "../api.js";
+import EventCountdown from "../components/EventCountdown.vue";
+import { parseMmDdYyyyWibTarget } from "../utils/event-display.js";
 
 const B = "/bismillah/assets";
+
+type HomeEvent = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  location: string;
+  time: string;
+  description: string;
+  day: string;
+  month: string;
+  targetMs: number | null;
+};
+
+type HomeBook = {
+  id: string;
+  author: string;
+  coverUrl: string;
+  pdfUrl: string;
+  downloadUrl: string;
+};
+
+const homeEvents: HomeEvent[] = [
+  {
+    id: "1",
+    title: "Kajian Akbar Ramadhan",
+    imageUrl: `${B}/images/resources/event-img1.jpg`,
+    location: "Masjid Alfurqon, Bekasi",
+    time: "19:00 - 21:00 WIB",
+    description: "Kajian umum bersama ustadz tamu membahas keutamaan ibadah di bulan Ramadhan.",
+    day: "25",
+    month: "Agu",
+    targetMs: parseMmDdYyyyWibTarget("08/25/2026 19:00:00"),
+  },
+  {
+    id: "2",
+    title: "Tabligh Akbar Remaja",
+    imageUrl: `${B}/images/resources/event-img2.jpg`,
+    location: "Aula Serbaguna Alfurqon",
+    time: "16:00 - 18:30 WIB",
+    description: "Program khusus remaja masjid dengan materi akhlak dan peran generasi muda.",
+    day: "22",
+    month: "Sep",
+    targetMs: parseMmDdYyyyWibTarget("09/22/2026 16:00:00"),
+  },
+  {
+    id: "3",
+    title: "Pengajian Rutin Ahad Pagi",
+    imageUrl: `${B}/images/resources/event-img3.jpg`,
+    location: "Masjid Alfurqon, Bekasi",
+    time: "08:00 - 10:00 WIB",
+    description: "Pengajian rutin setiap Ahad pagi untuk jamaah umum dan keluarga.",
+    day: "01",
+    month: "Okt",
+    targetMs: parseMmDdYyyyWibTarget("10/01/2026 08:00:00"),
+  },
+];
+
+const homeBooks: HomeBook[] = [
+  {
+    id: "1",
+    author: "Ustadz Alfurqon",
+    coverUrl: `${B}/images/book-cover.jpg`,
+    pdfUrl: `${B}/sample/text.zip`,
+    downloadUrl: `${B}/sample/text.zip`,
+  },
+  {
+    id: "2",
+    author: "Tim Kajian Masjid",
+    coverUrl: `${B}/images/book-cover.jpg`,
+    pdfUrl: `${B}/sample/text.zip`,
+    downloadUrl: `${B}/sample/text.zip`,
+  },
+  {
+    id: "3",
+    author: "Pengurus TPQ",
+    coverUrl: `${B}/images/book-cover.jpg`,
+    pdfUrl: `${B}/sample/text.zip`,
+    downloadUrl: `${B}/sample/text.zip`,
+  },
+  {
+    id: "4",
+    author: "Dewan Masjid",
+    coverUrl: `${B}/images/book-cover.jpg`,
+    pdfUrl: `${B}/sample/text.zip`,
+    downloadUrl: `${B}/sample/text.zip`,
+  },
+];
 
 const soundcloudEmbedUrl =
   "https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/128094075&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true";
@@ -276,42 +365,6 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
                 </div>
-                <div class="col-md-4 col-sm-4 col-lg-4">
-                  <div class="book-block">
-                    <img :src="`${B}/images/book-cover.jpg`" alt="book-cover.jpg" />
-                    <div class="tch-inf">
-                      <span><i class="far fa-user theme-clr"></i>Sharuf Al</span>
-                      <div class="tch-dwn-btn">
-                        <a :href="`${B}/sample/text.zip`" title=""><i class="flaticon-pdf-file"></i></a>
-                        <a :href="`${B}/sample/text.zip`" title=""><i class="flaticon-download"></i></a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4 col-sm-4 col-lg-4">
-                  <div class="book-block">
-                    <img :src="`${B}/images/book-cover.jpg`" alt="book-cover.jpg" />
-                    <div class="tch-inf">
-                      <span><i class="far fa-user theme-clr"></i>Sharuf Al</span>
-                      <div class="tch-dwn-btn">
-                        <a :href="`${B}/sample/text.zip`" title=""><i class="flaticon-pdf-file"></i></a>
-                        <a :href="`${B}/sample/text.zip`" title=""><i class="flaticon-download"></i></a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4 col-sm-4 col-lg-4">
-                  <div class="book-block">
-                    <img :src="`${B}/images/book-cover.jpg`" alt="book-cover.jpg" />
-                    <div class="tch-inf">
-                      <span><i class="far fa-user theme-clr"></i>Sharuf Al</span>
-                      <div class="tch-dwn-btn">
-                        <a :href="`${B}/sample/text.zip`" title=""><i class="flaticon-pdf-file"></i></a>
-                        <a :href="`${B}/sample/text.zip`" title=""><i class="flaticon-download"></i></a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -373,6 +426,45 @@ onBeforeUnmount(() => {
     </div>
   </section>
 
+
+  <section>
+    <div class="gap">
+      <div class="container">
+        <div class="sec-tl text-center">
+          <span class="theme-clr">Kegiatan Masjid Alfurqon</span>
+          <h2>Attend Our Events</h2>
+          <img :src="`${B}/images/pshapeg.png`" alt="" />
+        </div>
+        <div class="event-sec remove-ext5">
+          <div class="row">
+            <div
+              v-for="ev in homeEvents"
+              :key="ev.id"
+              class="col-md-4 col-sm-6 col-lg-4"
+            >
+              <div class="event-bx2 brd-rd5">
+                <div class="event-thmb">
+                  <span>{{ ev.day }} <i>{{ ev.month }}</i></span>
+                  <a href="#" :title="ev.title"><img :src="ev.imageUrl" :alt="ev.title" /></a>
+                  <EventCountdown v-if="ev.targetMs != null" :target-ms="ev.targetMs" />
+                </div>
+                <div class="event-inf">
+                  <h5><a href="#" :title="ev.title">{{ ev.title }}</a></h5>
+                  <ul class="pst-mta">
+                    <li><i class="fas fa-map-marker-alt theme-clr"></i> {{ ev.location }}</li>
+                    <li><i class="far fa-clock theme-clr"></i> {{ ev.time }}</li>
+                  </ul>
+                  <p>{{ ev.description }}</p>
+                  <RouterLink :to="{ name: 'jadwal-kajian' }">Detail Kegiatan</RouterLink>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section>
     <div class="gap black-layer opc8 white-testi">
       <div class="fixed-bg" :style="{ backgroundImage: `url(${B}/images/parallax2.jpg)` }"></div>
@@ -389,6 +481,38 @@ onBeforeUnmount(() => {
                 <a :href="`${B}/images/resources/gallery-img2-${n}.jpg`" data-fancybox="gallery" title="">
                   <img :src="`${B}/images/resources/gallery-img2-${n}.jpg`" :alt="`gallery-${n}`" />
                 </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="gap">
+      <div class="container">
+        <div class="sec-tl text-center">
+          <span class="theme-clr">Free Gift Books</span>
+          <h2>Books Corner</h2>
+          <img :src="`${B}/images/pshapeg.png`" alt="" />
+        </div>
+        <div class="team-sec">
+          <div class="row">
+            <div
+              v-for="book in homeBooks"
+              :key="book.id"
+              class="col-md-3 col-sm-6 col-lg-3"
+            >
+              <div class="book-block">
+                <img :src="book.coverUrl" :alt="book.author" />
+                <div class="tch-inf">
+                  <span><i class="far fa-user theme-clr"></i>{{ book.author }}</span>
+                  <div class="tch-dwn-btn">
+                    <a :href="book.pdfUrl" title="PDF" target="_blank" rel="noopener noreferrer"><i class="flaticon-pdf-file"></i></a>
+                    <a :href="book.downloadUrl" title="Unduh" download><i class="flaticon-download"></i></a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

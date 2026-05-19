@@ -8,6 +8,7 @@ import PermissionsAdminView from "../views/master/PermissionsAdminView.vue";
 import ConfigAdminView from "../views/master/ConfigAdminView.vue";
 import ContentAdminView from "../views/content/ContentAdminView.vue";
 import ModulePlaceholderView from "../views/common/ModulePlaceholderView.vue";
+import ForbiddenView from "../views/common/ForbiddenView.vue";
 import TpqStudentsAdminView from "../views/program/TpqStudentsAdminView.vue";
 import QurbanZakatAdminView from "../views/program/QurbanZakatAdminView.vue";
 import AnnouncementsAdminView from "../views/announcement/AnnouncementsAdminView.vue";
@@ -17,6 +18,8 @@ import FinanceCashAdminView from "../views/finance/FinanceCashAdminView.vue";
 import FinanceReportsAdminView from "../views/finance/FinanceReportsAdminView.vue";
 import { useAuthStore } from "../stores/auth.js";
 import { useAccessStore } from "../stores/access.js";
+import { CMS_ACCESS_DENIED_MESSAGE } from "../constants/access-messages.js";
+import { toastError } from "../utils/toast.js";
 
 export const router = createRouter({
   history: createWebHistory("/admin/"),
@@ -40,6 +43,12 @@ export const router = createRouter({
           name: "dashboard",
           component: DashboardView,
           meta: { requiresAuth: true, title: "Dashboard", desc: "Ringkasan CMS" },
+        },
+        {
+          path: "forbidden",
+          name: "forbidden",
+          component: ForbiddenView,
+          meta: { requiresAuth: true, title: "Akses ditolak", skipMenuCheck: true },
         },
         {
           path: "master/users",
@@ -258,12 +267,45 @@ export const router = createRouter({
           component: ModulePlaceholderView,
           meta: { requiresAuth: true, title: "Maintenance", desc: "Aset & Inventaris — perawatan aset." },
         },
+        /** URL CMS tidak dikenal → dashboard (hindari layar kosong). */
+        {
+          path: ":pathMatch(.*)*",
+          name: "cms-catch-all",
+          redirect: { name: "dashboard" },
+        },
       ],
     },
   ],
 });
 
 const ACCESS_LOAD_TIMEOUT_MS = 12_000;
+
+const ROUTES_WITHOUT_MENU = new Set(["forbidden"]);
+
+function resolveHomeRouteName(allowed: Set<string>, fallback: string): string {
+  if (allowed.has("dashboard")) return "dashboard";
+  if (allowed.has(fallback)) return fallback;
+  return allowed.values().next().value ?? "dashboard";
+}
+
+async function waitForAccessMenu(access: ReturnType<typeof useAccessStore>): Promise<void> {
+  if (access.menu.length > 0 && !access.loading) return;
+  if (!access.loading) {
+    await Promise.race([
+      access.load(),
+      new Promise<void>((resolve) => {
+        window.setTimeout(resolve, ACCESS_LOAD_TIMEOUT_MS);
+      }),
+    ]);
+    return;
+  }
+  const deadline = Date.now() + ACCESS_LOAD_TIMEOUT_MS;
+  while (access.loading && Date.now() < deadline) {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 50);
+    });
+  }
+}
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
@@ -276,36 +318,50 @@ router.beforeEach(async (to) => {
   }
 
   if (token) {
-    if (!access.menu.length && !access.loading) {
-      await Promise.race([
-        access.load(),
-        new Promise<void>((resolve) => {
-          window.setTimeout(resolve, ACCESS_LOAD_TIMEOUT_MS);
-        }),
-      ]);
-    }
+    await waitForAccessMenu(access);
 
     const allowedRouteNames = new Set(access.menu.map((m) => m.routerName));
     const firstAllowed = access.menu[0]?.routerName || "dashboard";
+    const homeRouteName = resolveHomeRouteName(allowedRouteNames, firstAllowed);
 
-    /** Hindari redirect loop saat menu kosong (API gagal / role belum punya item menu). */
     if (allowedRouteNames.size === 0) {
       allowedRouteNames.add("dashboard");
     }
 
     const targetName = typeof to.name === "string" ? to.name : "";
-    const isAllowedRoute = targetName.length > 0 && allowedRouteNames.has(targetName);
+    const skipMenuCheck = to.meta.skipMenuCheck === true || ROUTES_WITHOUT_MENU.has(targetName);
+    const isAllowedRoute =
+      skipMenuCheck || (targetName.length > 0 && allowedRouteNames.has(targetName));
 
     if (to.name === "login") {
       const redir = typeof to.query.redirect === "string" ? to.query.redirect : "";
       if (redir.startsWith("/")) {
         return { path: redir, replace: true };
       }
-      return { name: firstAllowed, replace: true };
+      return { name: homeRouteName, replace: true };
     }
 
+    /** URL tidak terdaftar di router → dashboard / menu pertama (tanpa notif permission). */
+    if (to.meta.requiresAuth && !isAllowedRoute && to.redirectedFrom?.name === "cms-catch-all") {
+      const dest = homeRouteName;
+      if (targetName === dest) return true;
+      return { name: dest, replace: true };
+    }
+
+    /** Route ada, tapi tidak ada di menu user → halaman forbidden + toast (pesan standar). */
     if (to.meta.requiresAuth && !isAllowedRoute) {
-      return { name: firstAllowed, replace: true };
+      toastError(CMS_ACCESS_DENIED_MESSAGE);
+      if (targetName === "forbidden") return true;
+      const moduleLabel =
+        typeof to.meta.title === "string" && to.meta.title.trim() ? to.meta.title.trim() : "";
+      return {
+        name: "forbidden",
+        query: {
+          ...(moduleLabel ? { module: moduleLabel } : {}),
+          ...(to.path ? { from: to.path } : {}),
+        },
+        replace: true,
+      };
     }
   }
 

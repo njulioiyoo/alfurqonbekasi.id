@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+/** File pertama yang terbaca menang (dotenv tidak menimpa env yang sudah ada). Dev lokal: www/.env. */
 for (const envPath of [
   path.resolve(process.cwd(), ".env"),
   path.resolve(process.cwd(), "../.env"),

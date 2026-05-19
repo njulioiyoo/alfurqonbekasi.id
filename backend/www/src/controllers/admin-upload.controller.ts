@@ -6,6 +6,7 @@ import multer from "multer";
 import type { AuthedRequest } from "../middleware/auth.middleware.js";
 import { uploadsRootDir } from "../utils/uploads-path.js";
 import { validateBannerImageBuffer } from "../utils/banner-image.js";
+import { validateEventCoverBuffer } from "../utils/event-cover-image.js";
 import { validateGalleryImageBuffer } from "../utils/gallery-image.js";
 
 const allowedMime = new Set([
@@ -108,6 +109,13 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
   }
   if (uploadContext === "banner") {
     const dimErr = validateBannerImageBuffer(file.buffer, file.mimetype);
+    if (dimErr) {
+      res.status(400).json({ ok: false, error: { code: "INVALID_IMAGE_SIZE", message: dimErr } });
+      return;
+    }
+  }
+  if (uploadContext === "event_cover") {
+    const dimErr = validateEventCoverBuffer(file.buffer, file.mimetype);
     if (dimErr) {
       res.status(400).json({ ok: false, error: { code: "INVALID_IMAGE_SIZE", message: dimErr } });
       return;

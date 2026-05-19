@@ -36,6 +36,15 @@ export interface SiteConfig {
   visi: string;
   misi: string;
   homeBanners: HomeBannerSlide[];
+  maintenanceMode: boolean;
+}
+
+function readBool(raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined || raw === "") return fallback;
+  const v = raw.trim().toLowerCase();
+  if (v === "true" || v === "1" || v === "yes") return true;
+  if (v === "false" || v === "0" || v === "no") return false;
+  return fallback;
 }
 
 function parseHomeBannersJson(raw: string | undefined): HomeBannerSlide[] {
@@ -90,6 +99,7 @@ export async function getPublicConfig(): Promise<SiteConfig> {
     visi: "",
     misi: "",
     homeBanners: [],
+    maintenanceMode: false,
   };
 
   try {
@@ -104,6 +114,7 @@ export async function getPublicConfig(): Promise<SiteConfig> {
       }
     }
     defaults.homeBanners = parseHomeBannersJson(v.homeBannersJson);
+    defaults.maintenanceMode = readBool(v.maintenanceMode, false);
   } catch { /* fallback to defaults */ }
 
   return defaults;
@@ -115,6 +126,77 @@ export type SubmitContactBody = {
   phone?: string;
   message: string;
 };
+
+export type PublicContentItem = {
+  id: string;
+  type: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  coverImageUrl: string;
+  publishedAt: string | null;
+  sortOrder: number;
+  isFeatured: boolean;
+  attr1: string;
+  attr2: string;
+  attr3: string;
+  attr4: string;
+  attr5: string;
+};
+
+export type ContentStatusCounts = {
+  published: number;
+  draft: number;
+  archived: number;
+  all: number;
+};
+
+export type PublicEventsResponse = {
+  ok: boolean;
+  data?: {
+    items: PublicContentItem[];
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    statusCounts?: ContentStatusCounts;
+  };
+  error?: { message: string };
+};
+
+export async function getPublicEvents(
+  page = 1,
+  limit = 6
+): Promise<PublicEventsResponse> {
+  try {
+    const q = new URLSearchParams({
+      page: String(Math.max(1, page)),
+      limit: String(Math.max(1, limit)),
+    });
+    const res = await fetch(`${BASE}/content/event?${q}`);
+    return (await res.json()) as PublicEventsResponse;
+  } catch {
+    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
+
+export type PublicPrayerStaffResponse = PublicEventsResponse;
+
+export async function getPublicPrayerStaff(
+  page = 1,
+  limit = 6
+): Promise<PublicPrayerStaffResponse> {
+  try {
+    const q = new URLSearchParams({
+      page: String(Math.max(1, page)),
+      limit: String(Math.max(1, limit)),
+    });
+    const res = await fetch(`${BASE}/content/prayer_staff?${q}`);
+    return (await res.json()) as PublicPrayerStaffResponse;
+  } catch {
+    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
 
 export async function submitContact(
   body: SubmitContactBody

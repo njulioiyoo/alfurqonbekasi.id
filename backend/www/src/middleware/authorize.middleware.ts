@@ -20,7 +20,8 @@ export function authorize(action: AppActions, subject: AppSubject) {
         ok: false,
         error: {
           code: "FORBIDDEN",
-          message: "Anda tidak punya akses untuk aksi ini",
+          message:
+            "Anda tidak memiliki izin untuk mengakses halaman atau fitur ini. Hubungi administrator jika membutuhkan akses.",
           meta: { action, subject },
         },
       });

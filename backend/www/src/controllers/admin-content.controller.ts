@@ -9,6 +9,7 @@ import {
   updateContent,
 } from "../services/content.service.js";
 import { canManageContentType } from "../utils/content-acl.js";
+import { validateEventCoverUrl } from "../utils/event-cover-image.js";
 import { validateGalleryCoverUrl } from "../utils/gallery-image.js";
 import { parseMetronicDatatableBody, queryGeneralSearch } from "../utils/metronic-datatable.js";
 
@@ -133,7 +134,9 @@ const NON_SCHEDULE_CONTENT_TYPES = ["article", "announcement", "program", "page"
 export async function listContentDatatable(req: AuthedRequest, res: Response): Promise<void> {
   const dt = parseMetronicDatatableBody(req.body);
   const search = queryGeneralSearch(dt.query);
-  const rawCt = dt.contentType?.trim();
+  const queryCt =
+    typeof req.query.contentType === "string" ? req.query.contentType.trim() : "";
+  const rawCt = (dt.contentType?.trim() || queryCt) || "";
   const typeFilter =
     rawCt && contentTypeSchema.safeParse(rawCt).success ? rawCt : undefined;
 
@@ -274,6 +277,13 @@ export async function postContent(req: AuthedRequest, res: Response): Promise<vo
         return;
       }
     }
+    if (p.type === "event" && p.coverImageUrl?.trim()) {
+      const eventCoverErr = await validateEventCoverUrl(p.coverImageUrl.trim());
+      if (eventCoverErr) {
+        res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: eventCoverErr } });
+        return;
+      }
+    }
     const created = await createContent({
       type: p.type,
       title: p.title,
@@ -351,6 +361,21 @@ export async function patchContent(req: AuthedRequest, res: Response): Promise<v
       if (galleryErr) {
         res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: galleryErr } });
         return;
+      }
+    }
+    if (toType === "event") {
+      const cover =
+        p.coverImageUrl !== undefined
+          ? p.coverImageUrl === ""
+            ? ""
+            : String(p.coverImageUrl).trim()
+          : (existing.cover_image_url ?? "");
+      if (cover) {
+        const eventCoverErr = await validateEventCoverUrl(cover);
+        if (eventCoverErr) {
+          res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: eventCoverErr } });
+          return;
+        }
       }
     }
     const patch: Parameters<typeof updateContent>[1] = {
