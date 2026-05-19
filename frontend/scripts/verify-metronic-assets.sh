@@ -1,6 +1,5 @@
 #!/bin/sh
-# Pastikan aset Metronic BUNDLE (bukan vendor mentah) ada sebelum build/deploy.
-# Vendor mentah punya src/ + package.json tanpa dist/ → CMS error "Unexpected token '<'".
+# Bundle Metronic ada di Git: frontend/public/metronic/assets (bukan vendor npm mentah).
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="$ROOT/public/metronic/assets"
@@ -28,16 +27,15 @@ done
 
 if [ "$missing" -ne 0 ]; then
   echo "" >&2
-  echo "ERROR: Aset Metronic tidak lengkap atau masih VENDOR MENTAH (tanpa folder dist/)." >&2
+  echo "ERROR: Bundle Metronic di public/metronic/assets tidak lengkap atau rusak." >&2
   echo "" >&2
-  echo "Jangan upload isi vendors/ dari npm/GitHub. Pakai bundle resmi Metronic v6:" >&2
-  echo "  theme/classic/assets/  →  frontend/public/metronic/assets/" >&2
+  echo "Harusnya sudah ada di Git. Di server: git pull origin master" >&2
+  echo "Jangan timpa folder ini dengan vendor npm mentah (tanpa dist/)." >&2
   echo "" >&2
-  echo "Di mesin dev:" >&2
+  echo "Maintainer — refresh dari tema classic:" >&2
   echo "  export METRONIC_CLASSIC_ASSETS=/path/ke/metronic_v6/theme/classic/assets" >&2
-  echo "  cd frontend && npm run copy:metronic && npm run build" >&2
+  echo "  npm run copy:metronic" >&2
   echo "" >&2
-  echo "Deploy ke server: rsync seluruh frontend/dist/ (termasuk dist/metronic/)." >&2
-  echo "Jangan deploy public/metronic mentah atau folder vendors npm." >&2
+  echo "Lihat: public/metronic/BUNDLE.md" >&2
   exit 1
 fi
