@@ -11,6 +11,7 @@ import {
 import { canManageContentType } from "../utils/content-acl.js";
 import { validateEventCoverUrl } from "../utils/event-cover-image.js";
 import { validateGalleryCoverUrl } from "../utils/gallery-image.js";
+import { validatePrayerStaffCoverUrl } from "../utils/prayer-staff-cover-image.js";
 import { parseMetronicDatatableBody, queryGeneralSearch } from "../utils/metronic-datatable.js";
 
 const contentTypeSchema = z.enum([
@@ -284,6 +285,13 @@ export async function postContent(req: AuthedRequest, res: Response): Promise<vo
         return;
       }
     }
+    if (p.type === "prayer_staff" && p.coverImageUrl?.trim()) {
+      const psCoverErr = await validatePrayerStaffCoverUrl(p.coverImageUrl.trim());
+      if (psCoverErr) {
+        res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: psCoverErr } });
+        return;
+      }
+    }
     const created = await createContent({
       type: p.type,
       title: p.title,
@@ -374,6 +382,21 @@ export async function patchContent(req: AuthedRequest, res: Response): Promise<v
         const eventCoverErr = await validateEventCoverUrl(cover);
         if (eventCoverErr) {
           res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: eventCoverErr } });
+          return;
+        }
+      }
+    }
+    if (toType === "prayer_staff") {
+      const cover =
+        p.coverImageUrl !== undefined
+          ? p.coverImageUrl === ""
+            ? ""
+            : String(p.coverImageUrl).trim()
+          : (existing.cover_image_url ?? "");
+      if (cover) {
+        const psCoverErr = await validatePrayerStaffCoverUrl(cover);
+        if (psCoverErr) {
+          res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: psCoverErr } });
           return;
         }
       }

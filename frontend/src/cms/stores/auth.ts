@@ -29,21 +29,35 @@ function mapMe(data: MeResponse["data"]): SessionUser | null {
   };
 }
 
+const HYDRATE_TIMEOUT_MS = 10_000;
+
 export const useAuthStore = defineStore("auth", () => {
   const user = ref<SessionUser | null>(null);
   const hydrated = ref(false);
+  let hydratePromise: Promise<void> | null = null;
 
   const isAuthenticated = computed(() => Boolean(user.value));
 
-  async function hydrate(): Promise<void> {
-    try {
-      const json = await getJson<MeResponse>("/auth/me");
-      user.value = json.ok && json.data ? mapMe(json.data) : null;
-    } catch {
-      user.value = null;
-    } finally {
-      hydrated.value = true;
-    }
+  async function hydrate(force = false): Promise<void> {
+    if (hydrated.value && !force) return;
+    if (hydratePromise && !force) return hydratePromise;
+
+    hydratePromise = (async () => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), HYDRATE_TIMEOUT_MS);
+      try {
+        const json = await getJson<MeResponse>("/auth/me", { signal: controller.signal });
+        user.value = json.ok && json.data ? mapMe(json.data) : null;
+      } catch {
+        user.value = null;
+      } finally {
+        window.clearTimeout(timer);
+        hydrated.value = true;
+        hydratePromise = null;
+      }
+    })();
+
+    return hydratePromise;
   }
 
   function login(u: SessionUser): void {

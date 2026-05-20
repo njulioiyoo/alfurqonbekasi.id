@@ -58,9 +58,10 @@ const form = ref({
   xUrl: "",
   tiktokUrl: "",
   waChannelUrl: "",
-  gaMeasurementId: "",
+  gaMeasurementId: "G-LF7CY7J2PL",
   gtmContainerId: "",
   recaptchaSiteKey: "",
+  recaptchaSecretKey: "",
   mapsEmbedUrl: "",
   islamicDaysUrl: "https://www.islamicfinder.org/specialislamicdays/",
   smtpHost: "smtp.gmail.com",
@@ -231,6 +232,7 @@ const configKeys = [
   "gaMeasurementId",
   "gtmContainerId",
   "recaptchaSiteKey",
+  "recaptchaSecretKey",
   "mapsEmbedUrl",
   "islamicDaysUrl",
   "smtpHost",
@@ -866,18 +868,34 @@ onUnmounted(() => {
               <div class="form-group">
                 <label>Google Analytics Measurement ID</label>
                 <input v-model="form.gaMeasurementId" type="text" class="form-control" placeholder="G-XXXXXXXXXX" />
+                <span class="form-text text-muted">Dipakai di situs publik (gtag). Kosongkan untuk menonaktifkan.</span>
               </div>
             </div>
             <div class="col-lg-6">
               <div class="form-group">
                 <label>Google Tag Manager Container</label>
                 <input v-model="form.gtmContainerId" type="text" class="form-control" placeholder="GTM-XXXXXXX" />
+                <span class="form-text text-muted">Opsional. Jika diisi, snippet GTM dimuat di situs.</span>
               </div>
             </div>
             <div class="col-lg-6">
               <div class="form-group">
-                <label>reCAPTCHA Site Key</label>
-                <input v-model="form.recaptchaSiteKey" type="text" class="form-control" />
+                <label>reCAPTCHA Site Key (publik)</label>
+                <input v-model="form.recaptchaSiteKey" type="text" class="form-control" placeholder="6Lc…" />
+                <span class="form-text text-muted">Formulir kontak. Pasangkan dengan Secret Key di bawah.</span>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <div class="form-group">
+                <label>reCAPTCHA Secret Key (server)</label>
+                <input
+                  v-model="form.recaptchaSecretKey"
+                  type="password"
+                  class="form-control"
+                  placeholder="6Lc…"
+                  autocomplete="new-password"
+                />
+                <span class="form-text text-muted">Hanya disimpan di server, tidak diekspos ke situs.</span>
               </div>
             </div>
             <div class="col-lg-6">
@@ -890,7 +908,7 @@ onUnmounted(() => {
               <div class="form-group">
                 <label>Kalender Hari Besar Islam (URL)</label>
                 <input v-model="form.islamicDaysUrl" type="text" class="form-control" placeholder="https://www.islamicfinder.org/specialislamicdays/" />
-                <span class="form-text text-muted">URL iframe untuk widget hari besar Islam di footer. Default: IslamicFinder.</span>
+                <span class="form-text text-muted">URL iframe widget Hari Besar Islam di footer (IslamicFinder). Default: specialislamicdays.</span>
               </div>
             </div>
             <div class="col-12"><hr /><h6 class="text-muted">Email / SMTP (Gmail)</h6></div>

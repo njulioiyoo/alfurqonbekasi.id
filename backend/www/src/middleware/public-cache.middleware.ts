@@ -4,6 +4,7 @@ import { getRuntimeConfig } from "../services/runtime-config.service.js";
 function isPublicCacheableGet(path: string, method: string): boolean {
   if (method !== "GET") return false;
   if (path === "/public/config" || path === "/api/public/config") return true;
+  if (path === "/public/islamic-days" || path === "/api/public/islamic-days") return true;
   return (
     /^\/public\/content\/[a-z_]+$/.test(path) ||
     /^\/api\/public\/content\/[a-z_]+$/.test(path)

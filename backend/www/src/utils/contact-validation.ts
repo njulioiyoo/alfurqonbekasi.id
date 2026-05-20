@@ -23,6 +23,7 @@ export const contactBodySchema = z.object({
     .trim()
     .min(10, "Pesan minimal 10 karakter")
     .max(5000, "Pesan maksimal 5000 karakter"),
+  recaptchaToken: z.string().trim().optional(),
 });
 
 export type ContactBody = z.infer<typeof contactBodySchema>;

@@ -309,7 +309,9 @@ async function waitForAccessMenu(access: ReturnType<typeof useAccessStore>): Pro
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
-  await auth.hydrate();
+  if (!auth.hydrated) {
+    await auth.hydrate();
+  }
   const access = useAccessStore();
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) {

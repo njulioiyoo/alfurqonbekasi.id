@@ -1,3 +1,4 @@
+import "./styles/cms-shell.css";
 import "./styles/login-route.css";
 import { createApp } from "vue";
 import { createPinia } from "pinia";
@@ -9,8 +10,12 @@ async function bootstrap(): Promise<void> {
   const pinia = createPinia();
   const app = createApp(App);
   app.use(pinia);
-  await useAuthStore().hydrate();
   app.use(router);
+
+  await useAuthStore().hydrate();
+  /** Tunggu guard + rute awal (hard refresh /admin/...) selesai sebelum mount — hindari RouterView kosong. */
+  await router.isReady();
+
   app.mount("#app");
 }
 

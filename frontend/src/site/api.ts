@@ -1,3 +1,5 @@
+import { pickLatestIslamicDaysFallback } from "./data/islamic-days-fallback.js";
+
 const BASE = "/api/public";
 
 /** Slide banner beranda (JSON `homeBannersJson` di CMS). */
@@ -33,6 +35,9 @@ export interface SiteConfig {
   waChannelUrl: string;
   mapsEmbedUrl: string;
   islamicDaysUrl: string;
+  gaMeasurementId: string;
+  gtmContainerId: string;
+  recaptchaSiteKey: string;
   visi: string;
   misi: string;
   homeBanners: HomeBannerSlide[];
@@ -96,6 +101,9 @@ export async function getPublicConfig(): Promise<SiteConfig> {
     waChannelUrl: "",
     mapsEmbedUrl: "",
     islamicDaysUrl: "https://www.islamicfinder.org/specialislamicdays/",
+    gaMeasurementId: "",
+    gtmContainerId: "",
+    recaptchaSiteKey: "",
     visi: "",
     misi: "",
     homeBanners: [],
@@ -125,6 +133,7 @@ export type SubmitContactBody = {
   email: string;
   phone?: string;
   message: string;
+  recaptchaToken?: string;
 };
 
 export type PublicContentItem = {
@@ -195,6 +204,43 @@ export async function getPublicPrayerStaff(
     return (await res.json()) as PublicPrayerStaffResponse;
   } catch {
     return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
+
+export type IslamicDayItem = {
+  title: string;
+  month: string;
+  day: number;
+  subtitle: string;
+  dateIso: string;
+  link: string;
+};
+
+export async function getLatestIslamicDays(limit = 4): Promise<{
+  year: number;
+  items: IslamicDayItem[];
+  sourceUrl: string;
+  fromFallback?: boolean;
+}> {
+  const fallback = (): { year: number; items: IslamicDayItem[]; sourceUrl: string; fromFallback: true } => ({
+    year: 2026,
+    items: pickLatestIslamicDaysFallback(limit),
+    sourceUrl: "https://www.islamicfinder.org/specialislamicdays/",
+    fromFallback: true,
+  });
+
+  try {
+    const res = await fetch(`${BASE}/islamic-days?limit=${limit}`);
+    if (!res.ok) return fallback();
+    const json = (await res.json()) as {
+      ok?: boolean;
+      data?: { year: number; items: IslamicDayItem[]; sourceUrl: string };
+    };
+    const items = json.data?.items ?? [];
+    if (!json.ok || items.length === 0) return fallback();
+    return { ...json.data!, fromFallback: false };
+  } catch {
+    return fallback();
   }
 }
 

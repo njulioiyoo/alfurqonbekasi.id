@@ -26,9 +26,14 @@ function jsonHeaders(): Headers {
   return headers;
 }
 
-export async function getJson<T>(path: string): Promise<T> {
+export type FetchJsonOptions = {
+  signal?: AbortSignal;
+};
+
+export async function getJson<T>(path: string, options?: FetchJsonOptions): Promise<T> {
   const res = await fetch(apiUrl(path), {
     credentials: FETCH_CREDENTIALS,
+    signal: options?.signal,
   });
   return readJson<T>(res);
 }

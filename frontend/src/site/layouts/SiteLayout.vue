@@ -3,6 +3,7 @@ import { computed, onMounted, nextTick, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import { siteMenu } from "../menu.js";
 import { getPublicConfig, type SiteConfig } from "../api.js";
+import { applySiteIntegrations } from "../utils/site-integrations.js";
 
 const B = "/bismillah/assets";
 const cfg = ref<SiteConfig | null>(null);
@@ -26,8 +27,9 @@ const shortLocation = computed(() => {
 const logoUrl = computed(() => cfg.value?.logoUrl || `${B}/images/logogg.png`);
 const logoSmUrl = computed(() => cfg.value?.logoLightUrl || cfg.value?.logoUrl || `${B}/images/logo2.png`);
 const footerText = computed(() => cfg.value?.footerText || siteName.value);
-const islamicDaysUrl = computed(() => cfg.value?.islamicDaysUrl || "https://www.islamicfinder.org/specialislamicdays/");
-
+const islamicDaysUrl = computed(
+  () => cfg.value?.islamicDaysUrl?.trim() || "https://www.islamicfinder.org/specialislamicdays/"
+);
 type SocialLink = { url: string; icon: string; label: string };
 
 const socials = computed((): SocialLink[] => {
@@ -75,7 +77,9 @@ function hidePreloader(): void {
 }
 
 onMounted(async () => {
-  cfg.value = await getPublicConfig();
+  const loaded = await getPublicConfig();
+  cfg.value = loaded;
+  applySiteIntegrations(loaded);
   configReady.value = true;
 
   await nextTick();
@@ -310,7 +314,11 @@ onMounted(async () => {
                   <div class="widget">
                     <h5>Hari Besar Islam</h5>
                     <div v-if="islamicDaysUrl" class="site-islamic-days">
-                      <iframe :src="islamicDaysUrl" scrolling="no"></iframe>
+                      <iframe
+                        :src="islamicDaysUrl"
+                        title="Kalender Hari Besar Islam"
+                        scrolling="yes"
+                      ></iframe>
                     </div>
                   </div>
                 </div>
@@ -361,18 +369,21 @@ onMounted(async () => {
   border: 0;
 }
 
+/* Iframe widget IslamicFinder — tinggi tetap 260px, scroll untuk lihat semua hari */
 .site-islamic-days {
-  width: 100%;
-  max-width: 300px;
+  margin-top: 5px;
+  width: 300px;
+  max-width: 100%;
   height: 260px;
   overflow: hidden;
-  margin-top: 5px;
 }
 
 .site-islamic-days iframe {
   width: 100%;
   height: 100%;
-  border: 0;
+  border: 0 dotted #ddd;
+  display: block;
+  overflow: auto;
 }
 
 .site-maintenance {

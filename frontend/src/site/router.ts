@@ -34,21 +34,13 @@ const router = createRouter({
   },
 });
 
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
+import { trackSitePageView } from "./utils/site-integrations.js";
 
 router.afterEach((to) => {
   const base = "Masjid Alfurqon Bekasi";
   const pageTitle = to.meta.title as string | undefined;
   document.title = pageTitle && pageTitle !== "Beranda" ? `${pageTitle} | ${base}` : base;
-
-  window.gtag?.("config", "G-LF7CY7J2PL", {
-    page_path: to.fullPath,
-    page_title: document.title,
-  });
+  trackSitePageView(to.fullPath, document.title);
 });
 
 export default router;

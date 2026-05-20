@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { getPublicConfig, submitContact, type SiteConfig } from "../api.js";
+import {
+  getRecaptchaResponse,
+  renderRecaptchaWidget,
+  resetRecaptchaWidget,
+} from "../utils/site-integrations.js";
 
 const B = "/bismillah/assets";
 
@@ -28,8 +33,21 @@ const formSent = ref(false);
 const formError = ref("");
 const fieldErrors = ref<{ name?: string; email?: string; phone?: string; message?: string }>({});
 const submitting = ref(false);
+const recaptchaSiteKey = computed(() => (cfg.value?.recaptchaSiteKey || "").trim());
+const recaptchaEnabled = computed(() => recaptchaSiteKey.value.length > 0);
+const recaptchaEl = ref<HTMLElement | null>(null);
+let recaptchaWidgetId: number | null = null;
 
 const messageLen = computed(() => form.value.message.trim().length);
+
+async function setupRecaptcha(): Promise<void> {
+  if (!recaptchaEnabled.value || !recaptchaEl.value) return;
+  try {
+    recaptchaWidgetId = await renderRecaptchaWidget(recaptchaEl.value, recaptchaSiteKey.value);
+  } catch {
+    formError.value = "Gagal memuat reCAPTCHA. Muat ulang halaman.";
+  }
+}
 
 function validateForm(): boolean {
   const errors: { name?: string; email?: string; phone?: string; message?: string } = {};
@@ -60,6 +78,19 @@ async function onSubmit(): Promise<void> {
   formSent.value = false;
   if (!validateForm()) return;
 
+  let recaptchaToken: string | undefined;
+  if (recaptchaEnabled.value) {
+    if (recaptchaWidgetId === null) {
+      formError.value = "reCAPTCHA belum siap. Tunggu sebentar lalu coba lagi.";
+      return;
+    }
+    recaptchaToken = getRecaptchaResponse(recaptchaWidgetId);
+    if (!recaptchaToken) {
+      formError.value = "Selesaikan verifikasi reCAPTCHA terlebih dahulu.";
+      return;
+    }
+  }
+
   submitting.value = true;
   try {
     const json = await submitContact({
@@ -67,13 +98,16 @@ async function onSubmit(): Promise<void> {
       email: form.value.email.trim(),
       phone: form.value.phone.trim(),
       message: form.value.message.trim(),
+      recaptchaToken,
     });
     if (!json.ok) {
       formError.value = json.error?.message || "Gagal mengirim pesan. Coba lagi.";
+      if (recaptchaWidgetId !== null) resetRecaptchaWidget(recaptchaWidgetId);
       return;
     }
     formSent.value = true;
     form.value = { name: "", email: "", phone: "", message: "" };
+    if (recaptchaWidgetId !== null) resetRecaptchaWidget(recaptchaWidgetId);
   } catch {
     formError.value = "Tidak dapat menghubungi server.";
   } finally {
@@ -83,6 +117,8 @@ async function onSubmit(): Promise<void> {
 
 onMounted(async () => {
   cfg.value = await getPublicConfig();
+  await nextTick();
+  await setupRecaptcha();
 });
 </script>
 
@@ -126,6 +162,9 @@ onMounted(async () => {
               </div>
               <div class="col-md-12 col-sm-12 col-lg-12">
                 <textarea v-model="form.message" class="brd-rd5" placeholder="Pesan" required></textarea>
+              </div>
+              <div v-if="recaptchaEnabled" class="col-md-12 col-sm-12 col-lg-12 contact-recaptcha-wrap">
+                <div ref="recaptchaEl" class="g-recaptcha-inline"></div>
               </div>
               <div class="col-md-12 col-sm-12 col-lg-12">
                 <button type="submit" class="theme-btn theme-bg brd-rd5" :disabled="submitting">
@@ -232,5 +271,11 @@ onMounted(async () => {
 
 .contact-field-invalid {
   border-color: #c0392b !important;
+}
+
+.contact-recaptcha-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 5px;
 }
 </style>

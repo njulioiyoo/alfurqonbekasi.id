@@ -60,6 +60,20 @@ const { flags: accessFlags } = storeToRefs(access);
 
 const isScheduleMode = computed(() => props.fixedType === "event");
 const isPrayerStaffMode = computed(() => props.fixedType === "prayer_staff");
+
+function prayerSelectOptions(base: readonly string[], current: string): string[] {
+  const c = current.trim();
+  if (c && !base.includes(c)) return [c, ...base];
+  return [...base];
+}
+
+const prayerSlotSelectOptions = computed(() =>
+  prayerSelectOptions(PRAYER_SLOT_IBADAH_OPTIONS, form.value.attr1),
+);
+const prayerTaskSelectOptions = computed(() =>
+  prayerSelectOptions(PRAYER_JENIS_TUGAS_OPTIONS, form.value.attr2),
+);
+
 const isProgramSocialMode = computed(() => props.fixedType === "program");
 const isGalleryMode = computed(() => props.fixedType === "gallery");
 
@@ -73,7 +87,16 @@ const EVENT_COVER_HEIGHT = 400;
 const EVENT_THUMB_WIDTH = 350;
 const EVENT_THUMB_HEIGHT = 280;
 const EVENT_COVER_SIZE_HINT = `Satu gambar untuk web: minimal ${EVENT_COVER_WIDTH}×${EVENT_COVER_HEIGHT} px (rasio ±15%). Tampil sebagai thumbnail ${EVENT_THUMB_WIDTH}×${EVENT_THUMB_HEIGHT} dan detail ${EVENT_COVER_WIDTH}×${EVENT_COVER_HEIGHT}. Format JPEG, PNG, atau WebP.`;
-const eventCoverAccept = "image/jpeg,image/png,image/webp";
+
+const PRAYER_STAFF_COVER_WIDTH = 350;
+const PRAYER_STAFF_COVER_HEIGHT = 484;
+const PRAYER_STAFF_COVER_SIZE_HINT = `Gambar cover wajib tepat ${PRAYER_STAFF_COVER_WIDTH}×${PRAYER_STAFF_COVER_HEIGHT} px (JPEG, PNG, atau WebP).`;
+
+/** Opsi dropdown petugas ibadah (urutan waktu shalat). */
+const PRAYER_SLOT_IBADAH_OPTIONS = ["Subuh", "Dzuhur", "Ashar", "Maghrib", "Isya", "Jumat"] as const;
+const PRAYER_JENIS_TUGAS_OPTIONS = ["Imam", "Khatib", "Muadzin", "Bilal", "Imam & Khatib"] as const;
+
+const scheduleCoverAccept = "image/jpeg,image/png,image/webp";
 const isOperationalScheduleMode = computed(() => isScheduleMode.value || isPrayerStaffMode.value);
 
 const canCreateContent = computed(() =>
@@ -282,6 +305,20 @@ async function validateGalleryImageFile(file: File): Promise<string | null> {
     const { width, height } = await readImageFileDimensions(file);
     if (width === GALLERY_IMAGE_WIDTH && height === GALLERY_IMAGE_HEIGHT) return null;
     return `Gambar galeri wajib berukuran tepat ${GALLERY_IMAGE_WIDTH}×${GALLERY_IMAGE_HEIGHT} piksel. Ukuran terdeteksi: ${width}×${height}.`;
+  } catch {
+    return "Tidak dapat membaca ukuran gambar. Pastikan file gambar valid.";
+  }
+}
+
+async function validatePrayerStaffCoverImageFile(file: File): Promise<string | null> {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) {
+    return "Gambar cover hanya mendukung format JPEG, PNG, atau WebP.";
+  }
+  try {
+    const { width, height } = await readImageFileDimensions(file);
+    if (width === PRAYER_STAFF_COVER_WIDTH && height === PRAYER_STAFF_COVER_HEIGHT) return null;
+    return `Gambar cover wajib berukuran tepat ${PRAYER_STAFF_COVER_WIDTH}×${PRAYER_STAFF_COVER_HEIGHT} piksel. Ukuran terdeteksi: ${width}×${height}.`;
   } catch {
     return "Tidak dapat membaca ukuran gambar. Pastikan file gambar valid.";
   }
@@ -496,10 +533,11 @@ const modalTitle = computed(() => {
   if (isGalleryMode.value) return editId.value ? "Ubah foto galeri" : "Foto galeri baru";
   return editId.value ? "Ubah program sosial" : "Program sosial baru";
 });
+const hasCoverImage = computed(() => Boolean(form.value.coverImageUrl?.trim()));
 const coverPreviewUrl = computed(() =>
-  form.value.coverImageUrl?.trim()
-    ? form.value.coverImageUrl
-    : "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='320'%3E%3Crect width='100%25' height='100%25' fill='%23f1f3f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23979fb8' font-family='Arial' font-size='20'%3ENo cover image%3C/text%3E%3C/svg%3E"
+  hasCoverImage.value
+    ? form.value.coverImageUrl.trim()
+    : "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='320'%3E%3Crect width='100%25' height='100%25' fill='%23f1f3f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23979fb8' font-family='Arial' font-size='14'%3EBelum ada gambar%3C/text%3E%3C/svg%3E"
 );
 const minExcerptLen = computed(() =>
   form.value.type === "event" || form.value.type === "prayer_staff" || form.value.type === "gallery" ? 0 : 300
@@ -706,11 +744,24 @@ async function onPickCover(ev: Event): Promise<void> {
       toastError(dimErr);
       return;
     }
+  } else if (isPrayerStaffMode.value) {
+    const dimErr = await validatePrayerStaffCoverImageFile(file);
+    if (dimErr) {
+      err.value = dimErr;
+      toastError(dimErr);
+      return;
+    }
   }
   uploadingImage.value = true;
   toastLoading("Mengupload gambar…");
   try {
-    const uploadContext = isGalleryMode.value ? "gallery" : isScheduleMode.value ? "event_cover" : undefined;
+    const uploadContext = isGalleryMode.value
+      ? "gallery"
+      : isScheduleMode.value
+        ? "event_cover"
+        : isPrayerStaffMode.value
+          ? "prayer_staff_cover"
+          : undefined;
     const json = await uploadAdminImage(file, uploadContext ? { context: uploadContext } : undefined);
     if (!json.ok || !json.data?.url) {
       err.value = json.error?.message || "Upload gambar gagal";
@@ -882,49 +933,118 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="col-12">
                       <h6 class="kt-font-bold kt-font-transform-u text-muted">Gambar / poster</h6>
-                      <div class="form-group">
-                        <label>{{ isScheduleMode ? "Poster kegiatan (opsional)" : "Cover (opsional)" }}</label>
-                        <input v-model="form.coverImageUrl" type="text" class="form-control" readonly placeholder="URL gambar setelah upload" />
-                        <div class="custom-file kt-margin-t-10">
-                          <input
-                            id="content_schedule_cover_upload"
-                            type="file"
-                            class="custom-file-input"
-                            :accept="isScheduleMode ? eventCoverAccept : 'image/*'"
-                            :disabled="uploadingImage"
-                            @change="onPickCover"
-                          />
-                          <label class="custom-file-label" for="content_schedule_cover_upload">
-                            {{ uploadingImage ? "Mengupload gambar..." : "Pilih gambar cover / poster" }}
-                          </label>
-                        </div>
-                        <template v-if="isScheduleMode">
-                          <p class="form-text text-muted kt-margin-t-10 mb-2">{{ EVENT_COVER_SIZE_HINT }}</p>
-                          <div class="cms-event-cover-previews">
-                            <div class="cms-cover-preview cms-cover-preview--event-thumb">
-                              <span class="cms-cover-preview-label">Thumbnail {{ EVENT_THUMB_WIDTH }}×{{ EVENT_THUMB_HEIGHT }}</span>
-                              <img :src="coverPreviewUrl" alt="Pratinjau thumbnail" />
+                      <div class="form-group cms-cover-field mb-0">
+                        <label class="mb-2">{{ isScheduleMode ? "Poster kegiatan (opsional)" : "Cover (opsional)" }}</label>
+                        <div class="cms-media-upload">
+                          <div class="cms-media-upload__panel">
+                            <div class="custom-file">
+                              <input
+                                id="content_schedule_cover_upload"
+                                type="file"
+                                class="custom-file-input"
+                                :accept="isOperationalScheduleMode ? scheduleCoverAccept : 'image/*'"
+                                :disabled="uploadingImage"
+                                @change="onPickCover"
+                              />
+                              <label class="custom-file-label" for="content_schedule_cover_upload">
+                                {{ uploadingImage ? "Mengupload gambar…" : "Pilih file gambar" }}
+                              </label>
                             </div>
-                            <div class="cms-cover-preview cms-cover-preview--event-detail">
-                              <span class="cms-cover-preview-label">Detail {{ EVENT_COVER_WIDTH }}×{{ EVENT_COVER_HEIGHT }}</span>
-                              <img :src="coverPreviewUrl" alt="Pratinjau detail" />
+                            <input
+                              v-model="form.coverImageUrl"
+                              type="text"
+                              class="form-control form-control-sm cms-media-upload__url"
+                              readonly
+                              placeholder="URL muncul setelah upload"
+                            />
+                            <p v-if="isScheduleMode" class="form-text text-muted mb-0">{{ EVENT_COVER_SIZE_HINT }}</p>
+                            <p v-else-if="isPrayerStaffMode" class="form-text text-muted mb-0">{{ PRAYER_STAFF_COVER_SIZE_HINT }}</p>
+                          </div>
+                          <div class="cms-media-upload__preview-wrap">
+                            <template v-if="isScheduleMode">
+                              <div class="cms-media-upload__preview-card">
+                                <span class="cms-media-upload__preview-title">Thumbnail</span>
+                                <div
+                                  class="cms-media-upload__preview-frame cms-media-upload__preview-frame--event-thumb"
+                                  :class="{ 'cms-media-upload__preview-frame--empty': !hasCoverImage }"
+                                >
+                                  <img :src="coverPreviewUrl" alt="Pratinjau thumbnail" />
+                                </div>
+                                <span class="cms-media-upload__preview-caption">{{ EVENT_THUMB_WIDTH }}×{{ EVENT_THUMB_HEIGHT }} px</span>
+                              </div>
+                              <div class="cms-media-upload__preview-card cms-media-upload__preview-card--wide">
+                                <span class="cms-media-upload__preview-title">Detail halaman</span>
+                                <div
+                                  class="cms-media-upload__preview-frame cms-media-upload__preview-frame--event-detail"
+                                  :class="{ 'cms-media-upload__preview-frame--empty': !hasCoverImage }"
+                                >
+                                  <img :src="coverPreviewUrl" alt="Pratinjau detail" />
+                                </div>
+                                <span class="cms-media-upload__preview-caption">{{ EVENT_COVER_WIDTH }}×{{ EVENT_COVER_HEIGHT }} px</span>
+                              </div>
+                            </template>
+                            <div
+                              v-else-if="isPrayerStaffMode"
+                              class="cms-media-upload__preview-card cms-media-upload__preview-card--portrait"
+                            >
+                              <span class="cms-media-upload__preview-title">Pratinjau cover</span>
+                              <div
+                                class="cms-media-upload__preview-frame cms-media-upload__preview-frame--prayer-staff"
+                                :class="{ 'cms-media-upload__preview-frame--empty': !hasCoverImage }"
+                              >
+                                <img :src="coverPreviewUrl" alt="Pratinjau cover petugas ibadah" />
+                              </div>
+                              <span class="cms-media-upload__preview-caption">{{ PRAYER_STAFF_COVER_WIDTH }}×{{ PRAYER_STAFF_COVER_HEIGHT }} px</span>
+                            </div>
+                            <div v-else class="cms-media-upload__preview-card">
+                              <span class="cms-media-upload__preview-title">Pratinjau</span>
+                              <div
+                                class="cms-media-upload__preview-frame cms-media-upload__preview-frame--generic"
+                                :class="{ 'cms-media-upload__preview-frame--empty': !hasCoverImage }"
+                              >
+                                <img :src="coverPreviewUrl" alt="Pratinjau cover" />
+                              </div>
                             </div>
                           </div>
-                        </template>
-                        <div v-else class="cms-cover-preview kt-margin-t-10">
-                          <img :src="coverPreviewUrl" alt="Cover preview" />
                         </div>
-                        <span class="form-text text-muted">Disimpan di <code>cover_image_url</code>.</span>
                       </div>
                     </div>
                     <div class="col-12 kt-margin-t-15">
                       <h6 class="kt-font-bold kt-font-transform-u text-muted">Detail jadwal</h6>
                     </div>
                     <div class="col-md-6">
-                      <div class="form-group"><label>{{ isPrayerStaffMode ? "Slot ibadah" : "Lokasi" }}</label><input v-model="form.attr1" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'Subuh / Dzuhur / Jumat / Maghrib / Isya' : 'Masjid / aula / online'" /></div>
+                      <div class="form-group">
+                        <label>{{ isPrayerStaffMode ? "Slot ibadah" : "Lokasi" }}</label>
+                        <select
+                          v-if="isPrayerStaffMode"
+                          v-model="form.attr1"
+                          class="form-control"
+                        >
+                          <option value="">— Pilih slot —</option>
+                          <option v-for="opt in prayerSlotSelectOptions" :key="opt" :value="opt">{{ opt }}</option>
+                        </select>
+                        <input
+                          v-else
+                          v-model="form.attr1"
+                          type="text"
+                          class="form-control"
+                          placeholder="Masjid / aula / online"
+                        />
+                      </div>
                     </div>
                     <div class="col-md-6">
-                      <div class="form-group"><label>{{ isPrayerStaffMode ? "Jenis tugas" : "Pemateri" }}</label><input v-model="form.attr2" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'imam / khatib / muadzin / bilal' : ''" /></div>
+                      <div class="form-group">
+                        <label>{{ isPrayerStaffMode ? "Jenis tugas" : "Pemateri" }}</label>
+                        <select
+                          v-if="isPrayerStaffMode"
+                          v-model="form.attr2"
+                          class="form-control"
+                        >
+                          <option value="">— Pilih jenis tugas —</option>
+                          <option v-for="opt in prayerTaskSelectOptions" :key="opt" :value="opt">{{ opt }}</option>
+                        </select>
+                        <input v-else v-model="form.attr2" type="text" class="form-control" />
+                      </div>
                     </div>
                     <div class="col-md-6">
                       <div class="form-group"><label>{{ isPrayerStaffMode ? "Petugas utama" : "Waktu mulai" }}</label><input v-model="form.attr3" type="text" class="form-control" :placeholder="isPrayerStaffMode ? 'nama ustadz / qari' : 'contoh: Jumat 19:30 / 2025-05-15 19:30'" /></div>
@@ -1019,27 +1139,49 @@ onBeforeUnmount(() => {
                       </div>
                     </div>
                     <div class="col-md-6">
-                      <div class="form-group">
-                        <label>{{ isGalleryMode ? "Foto galeri" : "Cover Image" }}</label>
-                        <input v-model="form.coverImageUrl" type="text" class="form-control" readonly />
-                        <div class="custom-file kt-margin-t-10">
-                          <input
-                            id="content_cover_upload"
-                            type="file"
-                            class="custom-file-input"
-                            :accept="isGalleryMode ? galleryCoverAccept : 'image/*'"
-                            :disabled="uploadingImage"
-                            @change="onPickCover"
-                          />
-                          <label class="custom-file-label" for="content_cover_upload">
-                            {{ uploadingImage ? "Mengupload..." : isGalleryMode ? "Pilih foto galeri" : "Pilih file cover" }}
-                          </label>
-                        </div>
-                        <div v-if="isGalleryMode" class="form-text text-muted kt-margin-t-5">
-                          {{ GALLERY_IMAGE_SIZE_HINT }}
-                        </div>
-                        <div class="cms-cover-preview kt-margin-t-10" :class="{ 'cms-cover-preview--gallery': isGalleryMode }">
-                          <img :src="coverPreviewUrl" alt="Cover preview" />
+                      <div class="form-group cms-cover-field">
+                        <label class="mb-2">{{ isGalleryMode ? "Foto galeri" : "Cover Image" }}</label>
+                        <div class="cms-media-upload cms-media-upload--stacked">
+                          <div class="cms-media-upload__panel">
+                            <div class="custom-file">
+                              <input
+                                id="content_cover_upload"
+                                type="file"
+                                class="custom-file-input"
+                                :accept="isGalleryMode ? galleryCoverAccept : 'image/*'"
+                                :disabled="uploadingImage"
+                                @change="onPickCover"
+                              />
+                              <label class="custom-file-label" for="content_cover_upload">
+                                {{ uploadingImage ? "Mengupload…" : isGalleryMode ? "Pilih foto galeri" : "Pilih file cover" }}
+                              </label>
+                            </div>
+                            <input
+                              v-model="form.coverImageUrl"
+                              type="text"
+                              class="form-control form-control-sm cms-media-upload__url"
+                              readonly
+                              placeholder="URL muncul setelah upload"
+                            />
+                            <p v-if="isGalleryMode" class="form-text text-muted mb-0">{{ GALLERY_IMAGE_SIZE_HINT }}</p>
+                          </div>
+                          <div class="cms-media-upload__preview-wrap">
+                            <div
+                              class="cms-media-upload__preview-card"
+                              :class="{ 'cms-media-upload__preview-card--gallery': isGalleryMode }"
+                            >
+                              <span class="cms-media-upload__preview-title">{{ isGalleryMode ? "Pratinjau galeri" : "Pratinjau cover" }}</span>
+                              <div
+                                class="cms-media-upload__preview-frame"
+                                :class="[
+                                  isGalleryMode ? 'cms-media-upload__preview-frame--gallery' : 'cms-media-upload__preview-frame--generic',
+                                  { 'cms-media-upload__preview-frame--empty': !hasCoverImage },
+                                ]"
+                              >
+                                <img :src="coverPreviewUrl" alt="Pratinjau gambar" />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1146,81 +1288,128 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.cms-cover-preview {
-  width: 100%;
-  min-height: 140px;
-  max-height: 220px;
-  border: 1px solid #e2e5ec;
-  border-radius: 4px;
-  background: #f7f8fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.cms-cover-field .custom-file-label {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.cms-cover-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.cms-cover-preview--gallery {
-  max-width: 390px;
-  min-height: 353px;
-  max-height: 353px;
-}
-
-.cms-cover-preview--gallery img {
-  object-fit: cover;
-}
-
-.cms-event-cover-previews {
+.cms-media-upload {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 10px;
+  gap: 1.25rem;
+  align-items: flex-start;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #ebedf2;
+  border-radius: 6px;
 }
 
-.cms-cover-preview-label {
-  display: block;
-  width: 100%;
-  font-size: 0.75rem;
+.cms-media-upload--stacked {
+  flex-direction: column;
+}
+
+.cms-media-upload__panel {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cms-media-upload__url {
+  font-size: 0.8rem;
   color: #6c7293;
-  margin-bottom: 6px;
+  background: #fff;
+}
+
+.cms-media-upload__preview-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.cms-media-upload__preview-card {
+  background: #fff;
+  border: 1px solid #e2e5ec;
+  border-radius: 6px;
+  padding: 0.65rem 0.75rem 0.75rem;
+  box-shadow: 0 1px 4px rgba(70, 78, 95, 0.08);
   text-align: center;
 }
 
-.cms-cover-preview--event-thumb {
-  width: 350px;
+.cms-media-upload__preview-card--wide {
+  flex: 1 1 280px;
   max-width: 100%;
-  min-height: 280px;
-  max-height: 280px;
-  flex-direction: column;
-  padding: 8px;
 }
 
-.cms-cover-preview--event-thumb img {
+.cms-media-upload__preview-title {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6c7293;
+  margin-bottom: 0.5rem;
+}
+
+.cms-media-upload__preview-frame {
+  margin: 0 auto;
+  background: #f4f5f8;
+  border-radius: 4px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.cms-media-upload__preview-frame img {
+  display: block;
   width: 100%;
-  height: 260px;
+  height: 100%;
   object-fit: cover;
-  object-position: center;
+  object-position: center top;
 }
 
-.cms-cover-preview--event-detail {
-  width: 100%;
-  max-width: 870px;
-  min-height: 400px;
-  max-height: 400px;
-  flex-direction: column;
-  padding: 8px;
+.cms-media-upload__preview-frame--empty img {
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.85;
 }
 
-.cms-cover-preview--event-detail img {
+.cms-media-upload__preview-frame--event-thumb {
+  width: 140px;
+  aspect-ratio: 350 / 280;
+}
+
+.cms-media-upload__preview-frame--event-detail {
   width: 100%;
-  height: 380px;
-  object-fit: cover;
-  object-position: center;
+  max-width: 320px;
+  aspect-ratio: 870 / 400;
+}
+
+.cms-media-upload__preview-frame--prayer-staff {
+  width: 130px;
+  aspect-ratio: 350 / 484;
+}
+
+.cms-media-upload__preview-frame--gallery {
+  width: 160px;
+  aspect-ratio: 390 / 353;
+}
+
+.cms-media-upload__preview-frame--generic {
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+}
+
+.cms-media-upload__preview-caption {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.7rem;
+  color: #a1a8c3;
 }
 
 #cms_modal_content_form .modal-body {

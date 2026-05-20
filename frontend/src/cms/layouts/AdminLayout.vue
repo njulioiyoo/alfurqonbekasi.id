@@ -202,6 +202,7 @@ function waitFrames(count: number): Promise<void> {
 }
 
 onMounted(async () => {
+  document.body.className = BODY_CLASS_READY;
   document.addEventListener("click", closeUserMenuIfOutside);
   window.addEventListener("cms-config-updated", loadBrandingConfig);
   void access.load();
@@ -242,6 +243,7 @@ onUnmounted(() => {
 async function logout(): Promise<void> {
   userMenuOpen.value = false;
   await auth.logout();
+  access.reset();
   void router.replace({ name: "login" });
 }
 </script>

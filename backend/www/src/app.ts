@@ -6,6 +6,7 @@ import { adminRouter } from "./routes/admin.routes.js";
 import * as publicConfigController from "./controllers/public-config.controller.js";
 import * as publicContactController from "./controllers/public-contact.controller.js";
 import * as publicContentController from "./controllers/public-content.controller.js";
+import * as publicIslamicDaysController from "./controllers/public-islamic-days.controller.js";
 import { maintenanceMiddleware } from "./middleware/maintenance.middleware.js";
 import { publicCacheMiddleware } from "./middleware/public-cache.middleware.js";
 import { rateLimitMiddleware } from "./middleware/rate-limit.middleware.js";
@@ -56,6 +57,9 @@ export function createApp(): express.Application {
   api.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);
   });
+  api.get("/public/islamic-days", (req, res, next) => {
+    void publicIslamicDaysController.getPublicIslamicDays(req, res).catch(next);
+  });
   api.use("/auth", authRouter);
   api.use("/admin", adminRouter);
 
@@ -75,6 +79,9 @@ export function createApp(): express.Application {
   });
   app.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);
+  });
+  app.get("/public/islamic-days", (req, res, next) => {
+    void publicIslamicDaysController.getPublicIslamicDays(req, res).catch(next);
   });
 
   app.use(

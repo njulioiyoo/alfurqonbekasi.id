@@ -1,7 +1,16 @@
 import type { Request, Response } from "express";
 import { createContactMessage } from "../services/contact-message.service.js";
+import { listConfigEntries } from "../services/config.service.js";
 import { sendContactNotificationEmail } from "../services/mail.service.js";
 import { contactBodySchema, contactValidationMessage } from "../utils/contact-validation.js";
+import { verifyRecaptchaToken } from "../utils/recaptcha.js";
+
+async function configMap(): Promise<Record<string, string>> {
+  const rows = await listConfigEntries();
+  const map: Record<string, string> = {};
+  for (const r of rows) map[r.key] = r.value;
+  return map;
+}
 
 export async function postPublicContact(req: Request, res: Response): Promise<void> {
   const parsed = contactBodySchema.safeParse(req.body);
@@ -17,8 +26,42 @@ export async function postPublicContact(req: Request, res: Response): Promise<vo
     return;
   }
 
-  const { name, email, phone, message } = parsed.data;
+  const { name, email, phone, message, recaptchaToken } = parsed.data;
   const phoneVal = phone?.trim() || "";
+
+  const cfg = await configMap();
+  const recaptchaSiteKey = (cfg.recaptchaSiteKey || "").trim();
+  const recaptchaSecret = (cfg.recaptchaSecretKey || "").trim();
+  if (recaptchaSiteKey) {
+    if (!recaptchaSecret) {
+      res.status(503).json({
+        ok: false,
+        error: {
+          code: "RECAPTCHA_MISCONFIGURED",
+          message: "reCAPTCHA belum dikonfigurasi lengkap di CMS (butuh Secret Key).",
+        },
+      });
+      return;
+    }
+    if (!recaptchaToken) {
+      res.status(400).json({
+        ok: false,
+        error: { code: "RECAPTCHA_REQUIRED", message: "Selesaikan verifikasi reCAPTCHA." },
+      });
+      return;
+    }
+    const captcha = await verifyRecaptchaToken(recaptchaSecret, recaptchaToken);
+    if (!captcha.ok) {
+      res.status(400).json({
+        ok: false,
+        error: {
+          code: "RECAPTCHA_FAILED",
+          message: "Verifikasi reCAPTCHA gagal. Muat ulang halaman dan coba lagi.",
+        },
+      });
+      return;
+    }
+  }
 
   try {
     const mail = await sendContactNotificationEmail({
