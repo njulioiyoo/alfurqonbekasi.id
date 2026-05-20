@@ -4,6 +4,7 @@ import { RouterLink, RouterView } from "vue-router";
 import { siteMenu } from "../menu.js";
 import { getPublicConfig, type SiteConfig } from "../api.js";
 import { applySiteIntegrations } from "../utils/site-integrations.js";
+import IslamicDaysWidget from "../components/IslamicDaysWidget.vue";
 
 const B = "/bismillah/assets";
 const cfg = ref<SiteConfig | null>(null);
@@ -27,9 +28,6 @@ const shortLocation = computed(() => {
 const logoUrl = computed(() => cfg.value?.logoUrl || `${B}/images/logogg.png`);
 const logoSmUrl = computed(() => cfg.value?.logoLightUrl || cfg.value?.logoUrl || `${B}/images/logo2.png`);
 const footerText = computed(() => cfg.value?.footerText || siteName.value);
-const islamicDaysUrl = computed(
-  () => cfg.value?.islamicDaysUrl?.trim() || "https://www.islamicfinder.org/specialislamicdays/"
-);
 type SocialLink = { url: string; icon: string; label: string };
 
 const socials = computed((): SocialLink[] => {
@@ -313,13 +311,7 @@ onMounted(async () => {
                 <div class="col-md-3 col-sm-6 col-lg-3">
                   <div class="widget">
                     <h5>Hari Besar Islam</h5>
-                    <div v-if="islamicDaysUrl" class="site-islamic-days">
-                      <iframe
-                        :src="islamicDaysUrl"
-                        title="Kalender Hari Besar Islam"
-                        scrolling="yes"
-                      ></iframe>
-                    </div>
+                    <IslamicDaysWidget />
                   </div>
                 </div>
               </div>
@@ -367,23 +359,6 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
   border: 0;
-}
-
-/* Iframe widget IslamicFinder — tinggi tetap 260px, scroll untuk lihat semua hari */
-.site-islamic-days {
-  margin-top: 5px;
-  width: 300px;
-  max-width: 100%;
-  height: 260px;
-  overflow: hidden;
-}
-
-.site-islamic-days iframe {
-  width: 100%;
-  height: 100%;
-  border: 0 dotted #ddd;
-  display: block;
-  overflow: auto;
 }
 
 .site-maintenance {

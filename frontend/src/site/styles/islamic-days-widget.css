@@ -1,0 +1,139 @@
+/**
+ * Widget Hari Besar Islam — replika ringkas IslamicFinder (300×260).
+ */
+.if-days {
+  width: 300px;
+  max-width: 100%;
+  height: 260px;
+  margin: 5px 0 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: #fff;
+  border: 0 dotted #ddd;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+}
+
+.if-days__state {
+  margin: 0;
+  padding: 12px 8px;
+  text-align: center;
+  color: #888;
+  font-size: 11px;
+}
+
+.if-days__head {
+  flex-shrink: 0;
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid #e8e8e8;
+  text-align: center;
+}
+
+.if-days__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #222;
+}
+
+.if-days__year {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.if-days__list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.if-days__row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  min-height: 48px;
+}
+
+.if-days__row:last-child {
+  border-bottom: 0;
+}
+
+.if-days__date {
+  flex-shrink: 0;
+  width: 44px;
+  background: #0d9488;
+  color: #fff;
+  text-align: center;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 0;
+}
+
+.if-days__day {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.if-days__month {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  opacity: 0.95;
+}
+
+.if-days__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.if-days__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0d6efd;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.if-days__name:hover {
+  text-decoration: underline;
+}
+
+.if-days__sub {
+  font-size: 10px;
+  color: #666;
+  line-height: 1.25;
+  margin-top: 2px;
+  display: block;
+}
+
+.if-days__more {
+  flex-shrink: 0;
+  display: block;
+  text-align: center;
+  font-size: 9px;
+  color: #888;
+  padding: 3px 6px 5px;
+  text-decoration: none;
+  border-top: 1px solid #eee;
+}
+
+.if-days__more:hover {
+  color: #0d6efd;
+}
