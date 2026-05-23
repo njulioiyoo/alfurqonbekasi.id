@@ -11,6 +11,7 @@ import {
 } from "../../api/admin.js";
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
+import { alertErrorDialog, confirmDeleteDialog } from "../../utils/sweetalert.js";
 
 interface JQueryLite {
   fn?: {
@@ -421,16 +422,22 @@ async function onManualWaBlast(): Promise<void> {
 
 async function onDelete(id: string, title: string): Promise<void> {
   if (!canDelete.value) return;
-  if (!window.confirm(`Hapus pengumuman "${title}"?`)) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus pengumuman?",
+    html: `Pengumuman <strong>${escapeHtml(title)}</strong> akan dihapus permanen.`,
+  });
+  if (!ok) return;
+  toastLoading("Menghapus…");
   try {
     const json = await deleteAdminAnnouncement(id);
     if (!json.ok) {
-      window.alert(json.error?.message || "Gagal menghapus");
+      toastError(json.error?.message || "Gagal menghapus");
       return;
     }
     reloadTable();
+    toastSuccess("Pengumuman berhasil dihapus.");
   } catch {
-    window.alert("Tidak dapat menghubungi server");
+    await alertErrorDialog({ text: "Tidak dapat menghubungi server" });
   }
 }
 

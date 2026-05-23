@@ -41,6 +41,8 @@ export const ADMIN_SCRIPT_CHAIN: string[] = [
   "vendors/general/bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js",
   "vendors/general/summernote/dist/summernote.js",
   "vendors/general/toastr/build/toastr.min.js",
+  "vendors/general/sweetalert2/dist/sweetalert2.min.js",
+  "vendors/custom/js/vendors/sweetalert2.init.js",
   /** Untuk dropdown ukuran halaman KTDatatable (`$('.selectpicker').selectpicker()`). */
   "vendors/general/bootstrap-select/dist/js/bootstrap-select.js",
   "vendors/general/js-cookie/src/js.cookie.js",

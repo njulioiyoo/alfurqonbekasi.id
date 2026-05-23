@@ -20,6 +20,7 @@ import {
 } from "../../api/admin.js";
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
+import { confirmDeleteDialog } from "../../utils/sweetalert.js";
 
 declare global {
   interface Window {
@@ -294,7 +295,11 @@ async function onSaveCampaign(): Promise<void> {
 
 async function onDeleteCampaign(id: string): Promise<void> {
   if (!canDelete.value) return;
-  if (!window.confirm("Hapus kampanye ini? Semua entri pembayaran di dalamnya ikut terhapus.")) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus kampanye?",
+    html: "Kampanye ini dan <strong>semua entri pembayaran</strong> di dalamnya akan dihapus permanen.",
+  });
+  if (!ok) return;
   try {
     const json = await deleteAdminQzCampaign(id);
     if (!json.ok) {
@@ -445,7 +450,11 @@ async function onSaveEntry(): Promise<void> {
 
 async function onDeleteEntry(id: string): Promise<void> {
   if (!canDelete.value) return;
-  if (!window.confirm("Hapus entri ini?")) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus entri?",
+    html: "Entri pembayaran ini akan dihapus permanen.",
+  });
+  if (!ok) return;
   try {
     const json = await deleteAdminQzEntry(id);
     if (!json.ok) {

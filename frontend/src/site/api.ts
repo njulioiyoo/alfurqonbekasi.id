@@ -207,6 +207,24 @@ export async function getPublicPrayerStaff(
   }
 }
 
+export type PublicGalleryResponse = PublicEventsResponse;
+
+export async function getPublicGallery(
+  page = 1,
+  limit = 8
+): Promise<PublicGalleryResponse> {
+  try {
+    const q = new URLSearchParams({
+      page: String(Math.max(1, page)),
+      limit: String(Math.max(1, limit)),
+    });
+    const res = await fetch(`${BASE}/content/gallery?${q}`);
+    return (await res.json()) as PublicGalleryResponse;
+  } catch {
+    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
+
 export type IslamicDayItem = {
   title: string;
   month: string;

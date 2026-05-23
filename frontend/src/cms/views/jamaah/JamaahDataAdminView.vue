@@ -10,6 +10,7 @@ import {
 } from "../../api/admin.js";
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
+import { alertErrorDialog, confirmDeleteDialog } from "../../utils/sweetalert.js";
 
 interface JQueryLite {
   fn?: { modal?: (...args: unknown[]) => unknown };
@@ -122,16 +123,20 @@ async function openEdit(id: string): Promise<void> {
 
 async function onDelete(id: string): Promise<void> {
   if (!canDelete.value) return;
-  if (!window.confirm("Hapus data jamaah ini?")) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus data jamaah?",
+    html: "Data jamaah ini akan dihapus permanen.",
+  });
+  if (!ok) return;
   try {
     const json = await deleteAdminJamaahMember(id);
     if (!json.ok) {
-      window.alert(json.error?.message || "Gagal menghapus");
+      await alertErrorDialog({ text: json.error?.message || "Gagal menghapus" });
       return;
     }
     reloadTable();
   } catch {
-    window.alert("Tidak dapat menghubungi server");
+    await alertErrorDialog({ text: "Tidak dapat menghubungi server" });
   }
 }
 

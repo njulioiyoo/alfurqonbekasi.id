@@ -100,3 +100,8 @@ export function isExternalUrl(url: string): boolean {
   return /^https?:\/\//i.test(url.trim());
 }
 
+export function galleryFallbackImage(index: number, assetBase: string): string {
+  const n = (index % 8) + 1;
+  return `${assetBase}/images/resources/gallery-img2-${n}.jpg`;
+}
+

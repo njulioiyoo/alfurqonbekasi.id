@@ -12,6 +12,7 @@ import {
 } from "../../api/admin.js";
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
+import { alertErrorDialog, confirmDeleteDialog } from "../../utils/sweetalert.js";
 
 type ContentType = "event" | "prayer_staff" | "program" | "gallery";
 
@@ -280,6 +281,21 @@ function plainTextFromHtml(html: string): string {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function formatAdminValidationError(
+  message: string,
+  details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
+): string {
+  const excerpt = details?.fieldErrors?.excerpt?.[0];
+  if (excerpt) return excerpt;
+  const formErr = details?.formErrors?.[0];
+  if (formErr) return formErr;
+  for (const msgs of Object.values(details?.fieldErrors ?? {})) {
+    const m = msgs?.[0];
+    if (m) return m;
+  }
+  return message;
+}
+
 function readImageFileDimensions(file: File): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -539,8 +555,12 @@ const coverPreviewUrl = computed(() =>
     ? form.value.coverImageUrl.trim()
     : "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='320'%3E%3Crect width='100%25' height='100%25' fill='%23f1f3f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23979fb8' font-family='Arial' font-size='14'%3EBelum ada gambar%3C/text%3E%3C/svg%3E"
 );
+/** Harus selaras dengan `minEx` di backend `admin-content.controller.ts` (jadwal/galeri = 20). */
+const SCHEDULE_MIN_EXCERPT_LEN = 20;
 const minExcerptLen = computed(() =>
-  form.value.type === "event" || form.value.type === "prayer_staff" || form.value.type === "gallery" ? 0 : 300
+  form.value.type === "event" || form.value.type === "prayer_staff" || form.value.type === "gallery"
+    ? SCHEDULE_MIN_EXCERPT_LEN
+    : 300
 );
 const minBodyLen = computed(() =>
   form.value.type === "event" || form.value.type === "prayer_staff" || form.value.type === "gallery" ? 0 : 300
@@ -693,14 +713,22 @@ async function onSave(): Promise<void> {
     if (!editId.value) {
       const json = await createAdminContent(payload);
       if (!json.ok) {
-        err.value = json.error?.message || "Gagal menambah konten";
+        err.value = formatAdminValidationError(
+          json.error?.message || "Gagal menambah konten",
+          (json.error as { details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] } })
+            ?.details
+        );
         toastError(err.value);
         return;
       }
     } else {
       const json = await patchAdminContent(editId.value, payload);
       if (!json.ok) {
-        err.value = json.error?.message || "Gagal menyimpan konten";
+        err.value = formatAdminValidationError(
+          json.error?.message || "Gagal menyimpan konten",
+          (json.error as { details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] } })
+            ?.details
+        );
         toastError(err.value);
         return;
       }
@@ -806,16 +834,28 @@ async function onPickScheduleFile(ev: Event): Promise<void> {
 
 async function onDelete(id: string, title: string): Promise<void> {
   if (!canDeleteContent.value) return;
-  if (!window.confirm(`Hapus konten "${title}"?`)) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus data?",
+    html: `Konten <strong>${escapeHtml(title)}</strong> akan dihapus permanen dan tidak dapat dikembalikan.`,
+  });
+  if (!ok) return;
+  toastLoading("Menghapus…");
   try {
     const json = await deleteAdminContent(id);
     if (!json.ok) {
-      window.alert(json.error?.message || "Gagal menghapus");
+      toastError(json.error?.message || "Gagal menghapus");
       return;
     }
     reloadTable();
+    toastSuccess(
+      isOperationalScheduleMode.value
+        ? "Jadwal berhasil dihapus."
+        : isGalleryMode.value
+          ? "Foto galeri berhasil dihapus."
+          : "Data berhasil dihapus."
+    );
   } catch {
-    window.alert("Tidak dapat menghubungi server");
+    await alertErrorDialog({ text: "Tidak dapat menghubungi server" });
   }
 }
 
@@ -1092,6 +1132,9 @@ onBeforeUnmount(() => {
                     <div class="col-12">
                       <div class="form-group">
                         <label>Ringkasan singkat</label>
+                        <span class="form-text text-muted d-block mb-2">
+                          Wajib minimal {{ SCHEDULE_MIN_EXCERPT_LEN }} karakter teks (tanpa tag HTML); tampil di daftar jadwal di web.
+                        </span>
                         <div ref="excerptEditorRef" class="cms-summernote-host"></div>
                         <div class="form-text text-right" :class="excerptCounterClass">
                           {{ excerptLen }}/{{ minExcerptLen }} karakter (plain text)

@@ -10,6 +10,8 @@ export type ContentListRow = {
   published_at: Date | null;
   sort_order: number;
   is_featured: boolean;
+  created_at: Date;
+  updated_at: Date;
   attr_1: string | null;
   attr_2: string | null;
   attr_3: string | null;
@@ -34,6 +36,8 @@ const CONTENT_SORT: Record<string, string> = {
   status: "status",
   publishedAt: "published_at",
   sortOrder: "sort_order",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
   attr1: "attr_1",
   attr2: "attr_2",
   attr3: "attr_3",
@@ -90,7 +94,7 @@ export async function listContentPaginatedFiltered(params: {
   const page = Math.max(params.page, 1);
   const offset = (page - 1) * limit;
   const search = params.search?.trim() || "";
-  const sortCol = CONTENT_SORT[params.sortField ?? ""] ?? "published_at";
+  const sortCol = CONTENT_SORT[params.sortField ?? ""] ?? "updated_at";
   const sortDirSql = params.sortDir === "asc" ? "ASC" : "DESC";
   const { sql: whereSql, values: whereVals } = buildContentWhereClause({
     search,
@@ -109,7 +113,8 @@ export async function listContentPaginatedFiltered(params: {
   const offsetIdx = whereVals.length + 2;
 
   const r = await pool.query<ContentListRow>(
-    `SELECT id, type, title, slug, status, published_at, sort_order, is_featured, attr_1, attr_2, attr_3
+    `SELECT id, type, title, slug, status, published_at, sort_order, is_featured, created_at, updated_at,
+            attr_1, attr_2, attr_3
      FROM content_items
      ${whereSql}
      ORDER BY ${sortCol} ${sortDirSql} NULLS LAST, title ASC
@@ -223,6 +228,7 @@ export async function updateContent(
   if (input.attr_4 !== undefined) assign("attr_4", input.attr_4);
   if (input.attr_5 !== undefined) assign("attr_5", input.attr_5);
   if (!sets.length) return true;
+  sets.push("updated_at = NOW()");
   vals.push(id);
   const r = await pool.query(
     `UPDATE content_items SET ${sets.join(", ")} WHERE id = $${n}`,

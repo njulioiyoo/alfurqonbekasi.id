@@ -9,6 +9,7 @@ import {
   staffRoleLabel,
   staffWhatsappHref,
 } from "../utils/prayer-staff-display.js";
+import { plainTextFromHtml } from "../utils/html-text.js";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
@@ -20,6 +21,7 @@ type StaffCard = PublicContentItem & {
   mainOfficer: string;
   backup: string;
   contact: string;
+  excerptPlain: string;
   roleLabel: string;
   contactTel: string | null;
   contactWa: string | null;
@@ -73,6 +75,7 @@ function mapStaff(row: PublicContentItem, globalIndex: number): StaffCard {
     mainOfficer: row.attr3?.trim() || "—",
     backup: row.attr4?.trim() || "",
     contact,
+    excerptPlain: plainTextFromHtml(row.excerpt ?? ""),
     roleLabel: staffRoleLabel(row.attr1 ?? "", row.attr2 ?? ""),
     contactTel: staffContactHref(contact),
     contactWa: staffWhatsappHref(contact),
@@ -204,7 +207,7 @@ onMounted(() => {
                     <h5>{{ item.mainOfficer }}</h5>
                     <span>{{ item.roleLabel }}</span>
                     <p v-if="item.backup" class="site-staff-backup">Pengganti: {{ item.backup }}</p>
-                    <p v-if="item.excerpt" class="site-staff-excerpt">{{ item.excerpt }}</p>
+                    <p v-if="item.excerptPlain" class="site-staff-excerpt">{{ item.excerptPlain }}</p>
                   </div>
                 </div>
               </div>

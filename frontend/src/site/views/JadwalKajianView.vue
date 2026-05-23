@@ -9,6 +9,7 @@ import {
   isExternalUrl,
   parseEventDateParts,
 } from "../utils/event-display.js";
+import { plainTextFromHtml } from "../utils/html-text.js";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
@@ -23,6 +24,7 @@ type EventCard = PublicContentItem & {
   targetMs: number | null;
   detailUrl: string;
   detailExternal: boolean;
+  excerptPlain: string;
 };
 
 type PageToken = number | "ellipsis";
@@ -74,6 +76,7 @@ function mapEvent(row: PublicContentItem, globalIndex: number): EventCard {
     targetMs: parts.targetMs,
     detailUrl: link || "#",
     detailExternal: isExternalUrl(link),
+    excerptPlain: plainTextFromHtml(row.excerpt ?? ""),
   };
 }
 
@@ -201,7 +204,7 @@ onMounted(() => {
                       <li v-if="ev.speaker"><i class="far fa-user theme-clr"></i> {{ ev.speaker }}</li>
                       <li><i class="far fa-clock theme-clr"></i> {{ ev.timeLabel }}</li>
                     </ul>
-                    <p v-if="ev.excerpt">{{ ev.excerpt }}</p>
+                    <p v-if="ev.excerptPlain">{{ ev.excerptPlain }}</p>
                     <a
                       v-if="ev.detailExternal"
                       :href="ev.detailUrl"

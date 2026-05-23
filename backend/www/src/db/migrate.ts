@@ -242,6 +242,14 @@ ALTER TABLE content_items ADD COLUMN IF NOT EXISTS attr_3 TEXT;
 ALTER TABLE content_items ADD COLUMN IF NOT EXISTS attr_4 TEXT;
 ALTER TABLE content_items ADD COLUMN IF NOT EXISTS attr_5 TEXT;
 
+ALTER TABLE content_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE content_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+UPDATE content_items
+SET created_at = COALESCE(published_at, created_at),
+    updated_at = COALESCE(published_at, updated_at)
+WHERE published_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_content_items_updated_at ON content_items (updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS jamaah_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name VARCHAR(255) NOT NULL,

@@ -9,6 +9,7 @@ import {
 } from "../../api/admin.js";
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
+import { alertErrorDialog, confirmDeleteDialog, escapeHtmlForSwal } from "../../utils/sweetalert.js";
 
 interface JQueryLite {
   fn?: { modal?: (...args: unknown[]) => unknown };
@@ -225,18 +226,22 @@ async function savePermission(): Promise<void> {
 }
 
 async function confirmDeletePermission(id: string, displayName: string): Promise<void> {
-  if (!window.confirm(`Hapus permission "${displayName}"? Pivot role akan ikut terhapus.`)) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus permission?",
+    html: `Permission <strong>${escapeHtmlForSwal(displayName)}</strong> akan dihapus. Pivot role terkait ikut terhapus.`,
+  });
+  if (!ok) return;
   permModalError.value = "";
   try {
     const json = await deleteAdminPermission(id);
     if (!json.ok) {
-      window.alert(json.error?.message || "Gagal menghapus");
+      await alertErrorDialog({ text: json.error?.message || "Gagal menghapus" });
       return;
     }
     reloadPermTable();
     void access.load();
   } catch {
-    window.alert("Tidak dapat menghubungi server");
+    await alertErrorDialog({ text: "Tidak dapat menghubungi server" });
   }
 }
 

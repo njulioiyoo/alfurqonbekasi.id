@@ -1,9 +1,23 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
-import { getPublicConfig, type HomeBannerSlide, type SiteConfig } from "../api.js";
+import {
+  getPublicConfig,
+  getPublicEvents,
+  getPublicGallery,
+  type HomeBannerSlide,
+  type PublicContentItem,
+  type SiteConfig,
+} from "../api.js";
 import EventCountdown from "../components/EventCountdown.vue";
-import { parseMmDdYyyyWibTarget } from "../utils/event-display.js";
+import { plainTextFromHtml } from "../utils/html-text.js";
+import {
+  eventFallbackImage,
+  eventTimeLabel,
+  galleryFallbackImage,
+  isExternalUrl,
+  parseEventDateParts,
+} from "../utils/event-display.js";
 
 const B = "/bismillah/assets";
 
@@ -17,6 +31,16 @@ type HomeEvent = {
   day: string;
   month: string;
   targetMs: number | null;
+  detailUrl: string;
+  detailExternal: boolean;
+};
+
+type HomeGalleryItem = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  eventDate: string;
+  location: string;
 };
 
 type HomeBook = {
@@ -27,41 +51,71 @@ type HomeBook = {
   downloadUrl: string;
 };
 
-const homeEvents: HomeEvent[] = [
-  {
-    id: "1",
-    title: "Kajian Akbar Ramadhan",
-    imageUrl: `${B}/images/resources/event-img1.jpg`,
-    location: "Masjid Alfurqon, Bekasi",
-    time: "19:00 - 21:00 WIB",
-    description: "Kajian umum bersama ustadz tamu membahas keutamaan ibadah di bulan Ramadhan.",
-    day: "25",
-    month: "Agu",
-    targetMs: parseMmDdYyyyWibTarget("08/25/2026 19:00:00"),
-  },
-  {
-    id: "2",
-    title: "Tabligh Akbar Remaja",
-    imageUrl: `${B}/images/resources/event-img2.jpg`,
-    location: "Aula Serbaguna Alfurqon",
-    time: "16:00 - 18:30 WIB",
-    description: "Program khusus remaja masjid dengan materi akhlak dan peran generasi muda.",
-    day: "22",
-    month: "Sep",
-    targetMs: parseMmDdYyyyWibTarget("09/22/2026 16:00:00"),
-  },
-  {
-    id: "3",
-    title: "Pengajian Rutin Ahad Pagi",
-    imageUrl: `${B}/images/resources/event-img3.jpg`,
-    location: "Masjid Alfurqon, Bekasi",
-    time: "08:00 - 10:00 WIB",
-    description: "Pengajian rutin setiap Ahad pagi untuk jamaah umum dan keluarga.",
-    day: "01",
-    month: "Okt",
-    targetMs: parseMmDdYyyyWibTarget("10/01/2026 08:00:00"),
-  },
-];
+const HOME_EVENTS_LIMIT = 3;
+const HOME_GALLERY_LIMIT = 8;
+
+const homeEvents = ref<HomeEvent[]>([]);
+const homeGallery = ref<HomeGalleryItem[]>([]);
+const homeEventsLoading = ref(true);
+const homeGalleryLoading = ref(true);
+
+function mapHomeEvent(row: PublicContentItem, index: number): HomeEvent {
+  const parts = parseEventDateParts(row.attr3, row.publishedAt);
+  const link = row.attr5?.trim() || "";
+  return {
+    id: row.id,
+    title: row.title,
+    imageUrl: row.coverImageUrl?.trim() || eventFallbackImage(index, B),
+    location: row.attr1?.trim() || "—",
+    time: eventTimeLabel(row.attr3, row.attr4),
+    description: plainTextFromHtml(row.excerpt ?? ""),
+    day: parts.day,
+    month: parts.month,
+    targetMs: parts.targetMs,
+    detailUrl: link,
+    detailExternal: isExternalUrl(link),
+  };
+}
+
+function mapHomeGallery(row: PublicContentItem, index: number): HomeGalleryItem {
+  return {
+    id: row.id,
+    title: row.title,
+    imageUrl: row.coverImageUrl?.trim() || galleryFallbackImage(index, B),
+    eventDate: row.attr1?.trim() || "",
+    location: row.attr2?.trim() || "",
+  };
+}
+
+async function loadHomeEvents(): Promise<void> {
+  homeEventsLoading.value = true;
+  try {
+    const json = await getPublicEvents(1, HOME_EVENTS_LIMIT);
+    homeEvents.value =
+      json.ok && json.data?.items.length
+        ? json.data.items.map((row, i) => mapHomeEvent(row, i))
+        : [];
+  } catch {
+    homeEvents.value = [];
+  } finally {
+    homeEventsLoading.value = false;
+  }
+}
+
+async function loadHomeGallery(): Promise<void> {
+  homeGalleryLoading.value = true;
+  try {
+    const json = await getPublicGallery(1, HOME_GALLERY_LIMIT);
+    homeGallery.value =
+      json.ok && json.data?.items.length
+        ? json.data.items.map((row, i) => mapHomeGallery(row, i))
+        : [];
+  } catch {
+    homeGallery.value = [];
+  } finally {
+    homeGalleryLoading.value = false;
+  }
+}
 
 const homeBooks: HomeBook[] = [
   {
@@ -234,6 +288,7 @@ function onBannerResize(): void {
 
 onMounted(async () => {
   cfg.value = await getPublicConfig();
+  await Promise.all([loadHomeEvents(), loadHomeGallery()]);
   await refreshBannerCarousel();
   await nextTick();
   initHomeFancybox();
@@ -251,6 +306,10 @@ onMounted(async () => {
 
 watch(displaySlides, () => {
   void refreshBannerCarousel();
+});
+
+watch(homeGallery, () => {
+  nextTick(() => initHomeFancybox());
 });
 
 onBeforeUnmount(() => {
@@ -435,7 +494,13 @@ onBeforeUnmount(() => {
           <h2>Attend Our Events</h2>
           <img :src="`${B}/images/pshapeg.png`" alt="" />
         </div>
-        <div class="event-sec remove-ext5">
+        <div v-if="homeEventsLoading" class="site-home-status text-center">
+          <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat kegiatan…</p>
+        </div>
+        <div v-else-if="homeEvents.length === 0" class="site-home-status text-center">
+          <p>Belum ada kegiatan dipublikasikan. Lihat <RouterLink :to="{ name: 'jadwal-kajian' }">jadwal kajian</RouterLink>.</p>
+        </div>
+        <div v-else class="event-sec remove-ext5">
           <div class="row">
             <div
               v-for="ev in homeEvents"
@@ -445,17 +510,41 @@ onBeforeUnmount(() => {
               <div class="event-bx2 brd-rd5">
                 <div class="event-thmb">
                   <span>{{ ev.day }} <i>{{ ev.month }}</i></span>
-                  <a href="#" :title="ev.title"><img :src="ev.imageUrl" :alt="ev.title" /></a>
+                  <a
+                    v-if="ev.detailExternal && ev.detailUrl"
+                    :href="ev.detailUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :title="ev.title"
+                  ><img :src="ev.imageUrl" :alt="ev.title" /></a>
+                  <RouterLink v-else :to="{ name: 'jadwal-kajian' }" :title="ev.title">
+                    <img :src="ev.imageUrl" :alt="ev.title" />
+                  </RouterLink>
                   <EventCountdown v-if="ev.targetMs != null" :target-ms="ev.targetMs" />
                 </div>
                 <div class="event-inf">
-                  <h5><a href="#" :title="ev.title">{{ ev.title }}</a></h5>
+                  <h5>
+                    <a
+                      v-if="ev.detailExternal && ev.detailUrl"
+                      :href="ev.detailUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      :title="ev.title"
+                    >{{ ev.title }}</a>
+                    <RouterLink v-else :to="{ name: 'jadwal-kajian' }" :title="ev.title">{{ ev.title }}</RouterLink>
+                  </h5>
                   <ul class="pst-mta">
                     <li><i class="fas fa-map-marker-alt theme-clr"></i> {{ ev.location }}</li>
                     <li><i class="far fa-clock theme-clr"></i> {{ ev.time }}</li>
                   </ul>
-                  <p>{{ ev.description }}</p>
-                  <RouterLink :to="{ name: 'jadwal-kajian' }">Detail Kegiatan</RouterLink>
+                  <p v-if="ev.description">{{ ev.description }}</p>
+                  <a
+                    v-if="ev.detailExternal && ev.detailUrl"
+                    :href="ev.detailUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >Detail Kegiatan</a>
+                  <RouterLink v-else :to="{ name: 'jadwal-kajian' }">Detail Kegiatan</RouterLink>
                 </div>
               </div>
             </div>
@@ -474,12 +563,23 @@ onBeforeUnmount(() => {
           <h2>Galeri Kegiatan</h2>
           <img :src="`${B}/images/pshapeg.png`" alt="" />
         </div>
-        <div class="gallery-wrap">
+        <div v-if="homeGalleryLoading" class="site-home-status text-center">
+          <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat galeri…</p>
+        </div>
+        <div v-else-if="homeGallery.length === 0" class="site-home-status text-center">
+          <p>Belum ada foto galeri dipublikasikan.</p>
+        </div>
+        <div v-else class="gallery-wrap">
           <div class="row mrg10">
-            <div v-for="n in 8" :key="n" class="col-md-3 col-sm-6 col-lg-3">
+            <div v-for="item in homeGallery" :key="item.id" class="col-md-3 col-sm-6 col-lg-3">
               <div class="gallery-item brd-rd5">
-                <a :href="`${B}/images/resources/gallery-img2-${n}.jpg`" data-fancybox="gallery" title="">
-                  <img :src="`${B}/images/resources/gallery-img2-${n}.jpg`" :alt="`gallery-${n}`" />
+                <a
+                  :href="item.imageUrl"
+                  data-fancybox="gallery"
+                  :data-caption="item.title"
+                  :title="item.title"
+                >
+                  <img :src="item.imageUrl" :alt="item.title" />
                 </a>
               </div>
             </div>
@@ -521,3 +621,14 @@ onBeforeUnmount(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.site-home-status {
+  padding: 24px 16px;
+  color: #666;
+}
+
+.site-home-status p {
+  margin: 0;
+}
+</style>

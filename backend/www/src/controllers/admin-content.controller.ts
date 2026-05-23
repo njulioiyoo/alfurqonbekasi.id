@@ -67,7 +67,7 @@ const contentCreateSchema = z
   .superRefine((data, ctx) => {
     const light = isLightweightType(data.type);
     const minEx = light ? 20 : 300;
-    if (data.excerpt.trim().length < minEx) {
+    if (plainTextLen(data.excerpt) < minEx) {
       ctx.addIssue({
         code: "custom",
         path: ["excerpt"],
@@ -111,7 +111,7 @@ const contentPatchSchema = z
     if (data.excerpt !== undefined && typ !== undefined) {
       const light = isLightweightType(typ);
       const minEx = light ? 20 : 300;
-      if (data.excerpt.trim().length < minEx) {
+      if (plainTextLen(data.excerpt) < minEx) {
         ctx.addIssue({
           code: "custom",
           path: ["excerpt"],

@@ -11,6 +11,7 @@ import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "../../stores/auth.js";
 import { useAccessStore } from "../../stores/access.js";
+import { alertErrorDialog, confirmDeleteDialog } from "../../utils/sweetalert.js";
 
 interface JQueryLite {
   fn?: { modal?: (...args: unknown[]) => unknown };
@@ -155,16 +156,20 @@ async function loadAndShowEditUser(id: string): Promise<void> {
 }
 
 async function confirmDeleteUser(id: string): Promise<void> {
-  if (!window.confirm("Hapus pengguna ini? Tindakan tidak dapat dibatalkan.")) return;
+  const ok = await confirmDeleteDialog({
+    title: "Hapus pengguna?",
+    html: "Akun pengguna ini akan dihapus permanen. Tindakan tidak dapat dibatalkan.",
+  });
+  if (!ok) return;
   try {
     const json = await deleteAdminUser(id);
     if (!json.ok) {
-      window.alert(json.error?.message || "Gagal menghapus");
+      await alertErrorDialog({ text: json.error?.message || "Gagal menghapus" });
       return;
     }
     reloadUsersTable();
   } catch {
-    window.alert("Tidak dapat menghubungi server");
+    await alertErrorDialog({ text: "Tidak dapat menghubungi server" });
   }
 }
 
