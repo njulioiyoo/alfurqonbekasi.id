@@ -778,6 +778,116 @@ export async function deleteAdminContactMessage(
   return deleteJson(`/admin/contact-messages/${encodeURIComponent(id)}`);
 }
 
+export type HallDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  capacity: number | null;
+  description: string;
+  coverImageUrl: string;
+  amenities: string[];
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type HallDetailResponse = {
+  ok: boolean;
+  data?: HallDetail;
+  error?: { code: string; message: string };
+};
+
+export type HallWriteBody = {
+  name: string;
+  slug?: string;
+  capacity?: number | null;
+  description?: string;
+  coverImageUrl?: string;
+  amenities?: string[];
+  isActive?: boolean;
+  sortOrder?: number;
+};
+
+export async function getAdminHall(id: string): Promise<HallDetailResponse> {
+  return getJson<HallDetailResponse>(`/admin/halls/${encodeURIComponent(id)}`);
+}
+
+export async function createAdminHall(body: HallWriteBody): Promise<HallDetailResponse> {
+  return postJson<HallDetailResponse>("/admin/halls", body);
+}
+
+export async function patchAdminHall(id: string, body: HallWriteBody): Promise<HallDetailResponse> {
+  return patchJson<HallDetailResponse>(`/admin/halls/${encodeURIComponent(id)}`, body);
+}
+
+export async function deleteAdminHall(
+  id: string
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return deleteJson(`/admin/halls/${encodeURIComponent(id)}`);
+}
+
+export async function listAdminHalls(): Promise<{
+  ok: boolean;
+  data?: { items: HallDetail[] };
+  error?: { code: string; message: string };
+}> {
+  return getJson(`/admin/halls`);
+}
+
+export async function syncAdminFacilities(body: {
+  items: HallWriteBody[];
+}): Promise<{ ok: boolean; data?: { items: HallDetail[] }; error?: { code: string; message: string } }> {
+  return putJson(`/admin/halls/sync`, body);
+}
+
+export type HallBookingDetail = {
+  id: string;
+  hallId: string;
+  hallName: string;
+  applicantName: string;
+  applicantPhone: string;
+  applicantEmail: string;
+  organization: string;
+  eventType: string;
+  eventTitle: string;
+  eventDateStart: string;
+  eventDateEnd: string;
+  timeStart: string;
+  timeEnd: string;
+  expectedAttendees: number | null;
+  notes: string;
+  status: string;
+  adminNotes: string;
+  emailSent: boolean;
+  emailError: string;
+  createdAt: string;
+  reviewedAt: string;
+};
+
+export type HallBookingDetailResponse = {
+  ok: boolean;
+  data?: HallBookingDetail;
+  error?: { code: string; message: string };
+};
+
+export async function getAdminHallBooking(id: string): Promise<HallBookingDetailResponse> {
+  return getJson<HallBookingDetailResponse>(`/admin/hall-bookings/${encodeURIComponent(id)}`);
+}
+
+export async function patchAdminHallBooking(
+  id: string,
+  body: { status?: string; adminNotes?: string }
+): Promise<HallBookingDetailResponse> {
+  return patchJson<HallBookingDetailResponse>(`/admin/hall-bookings/${encodeURIComponent(id)}`, body);
+}
+
+export async function deleteAdminHallBooking(
+  id: string
+): Promise<{ ok: boolean; error?: { code: string; message: string } }> {
+  return deleteJson(`/admin/hall-bookings/${encodeURIComponent(id)}`);
+}
+
 export type FinanceReportSummaryResponse = {
   ok: boolean;
   data?: {

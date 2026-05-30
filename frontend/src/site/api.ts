@@ -262,6 +262,74 @@ export async function getLatestIslamicDays(limit = 4): Promise<{
   }
 }
 
+export type PublicHall = {
+  id: string;
+  name: string;
+  slug: string;
+  capacity: number | null;
+  description: string;
+  coverImageUrl: string;
+  amenities: string[];
+};
+
+export type SubmitHallBookingBody = {
+  hallId: string;
+  applicantName: string;
+  applicantPhone: string;
+  applicantEmail?: string;
+  organization?: string;
+  eventType: string;
+  eventTitle: string;
+  eventDateStart: string;
+  eventDateEnd?: string;
+  timeStart?: string;
+  timeEnd?: string;
+  expectedAttendees?: number;
+  notes?: string;
+  recaptchaToken?: string;
+};
+
+export async function getPublicHalls(): Promise<{
+  ok: boolean;
+  data?: { items: PublicHall[] };
+  error?: { message: string };
+}> {
+  try {
+    const res = await fetch(`${BASE}/halls`);
+    return await res.json();
+  } catch {
+    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
+
+export async function getPublicHallAvailability(hallId: string): Promise<{
+  ok: boolean;
+  data?: { approvedRanges: { eventDateStart: string; eventDateEnd: string }[] };
+  error?: { message: string };
+}> {
+  try {
+    const res = await fetch(`${BASE}/hall-bookings/availability?hallId=${encodeURIComponent(hallId)}`);
+    return await res.json();
+  } catch {
+    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
+
+export async function submitHallBooking(
+  body: SubmitHallBookingBody
+): Promise<{ ok: boolean; data?: { id: string; emailSent: boolean }; error?: { message: string } }> {
+  try {
+    const res = await fetch(`${BASE}/hall-bookings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  }
+}
+
 export async function submitContact(
   body: SubmitContactBody
 ): Promise<{ ok: boolean; data?: { id: string; emailSent: boolean }; error?: { message: string } }> {

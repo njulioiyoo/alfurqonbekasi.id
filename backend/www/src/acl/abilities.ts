@@ -33,6 +33,7 @@ export function defineAbilityFromPermissionNames(names: string[]): AppAbility {
 
 /** Cek satu nama permission terhadap ability (untuk filter menu dari DB). */
 export function abilityAllowsPermissionName(ability: AppAbility, permissionName: string): boolean {
+  if (ability.can("manage", "all")) return true;
   const n = permissionName.trim();
   if (n === "manage:all") return ability.can("manage", "all");
   const i = n.indexOf(":");

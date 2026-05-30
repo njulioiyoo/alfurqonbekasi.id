@@ -82,6 +82,8 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
       !a.can("update", "PrayerSchedule") &&
       !a.can("create", "Gallery") &&
       !a.can("update", "Gallery") &&
+      !a.can("create", "Hall") &&
+      !a.can("update", "Hall") &&
       !a.can("create", "Program") &&
       !a.can("update", "Program"))
   ) {
@@ -115,7 +117,7 @@ export async function postImage(req: AuthedRequest, res: Response): Promise<void
       return;
     }
   }
-  if (uploadContext === "event_cover") {
+  if (uploadContext === "event_cover" || uploadContext === "hall_cover") {
     const dimErr = validateEventCoverBuffer(file.buffer, file.mimetype);
     if (dimErr) {
       res.status(400).json({ ok: false, error: { code: "INVALID_IMAGE_SIZE", message: dimErr } });
@@ -156,6 +158,8 @@ export async function postFile(req: AuthedRequest, res: Response): Promise<void>
       !a.can("update", "PrayerSchedule") &&
       !a.can("create", "Gallery") &&
       !a.can("update", "Gallery") &&
+      !a.can("create", "Hall") &&
+      !a.can("update", "Hall") &&
       !a.can("create", "Program") &&
       !a.can("update", "Program"))
   ) {

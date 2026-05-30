@@ -13,6 +13,7 @@ import { plainTextFromHtml } from "../utils/html-text.js";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
+const EXCERPT_MAX = 200;
 
 type StaffCard = PublicContentItem & {
   imageUrl: string;
@@ -37,12 +38,8 @@ const staffList = ref<StaffCard[]>([]);
 const currentPage = ref(1);
 const totalItems = ref(0);
 const totalPages = ref(0);
-const statusCounts = ref({ published: 0, draft: 0, archived: 0, all: 0 });
 const listTopRef = ref<HTMLElement | null>(null);
-
-const showDraftHint = computed(
-  () => !loading.value && !loadError.value && statusCounts.value.all > statusCounts.value.published
-);
+const expandedExcerpts = ref<Set<number>>(new Set());
 
 const showEmpty = computed(() => !loading.value && !loadError.value && totalItems.value === 0);
 const showPagination = computed(() => !loading.value && !loadError.value && totalPages.value > 1);
@@ -88,6 +85,22 @@ function scrollToListTop(): void {
   listTopRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function excerptNeedsMore(text: string): boolean {
+  return text.length > EXCERPT_MAX;
+}
+
+function excerptDisplay(text: string, id: number): string {
+  if (!excerptNeedsMore(text) || expandedExcerpts.value.has(id)) return text;
+  return `${text.slice(0, EXCERPT_MAX).trimEnd()}…`;
+}
+
+function toggleExcerpt(id: number): void {
+  const next = new Set(expandedExcerpts.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  expandedExcerpts.value = next;
+}
+
 async function loadPage(page: number): Promise<void> {
   loading.value = true;
   loadError.value = "";
@@ -105,9 +118,6 @@ async function loadPage(page: number): Promise<void> {
     currentPage.value = json.data.page;
     totalItems.value = json.data.total;
     totalPages.value = json.data.totalPages;
-    if (json.data.statusCounts) {
-      statusCounts.value = json.data.statusCounts;
-    }
   } catch {
     loadError.value = "Tidak dapat menghubungi server";
     staffList.value = [];
@@ -165,15 +175,6 @@ onMounted(() => {
         </div>
 
         <template v-else>
-          <div v-if="showDraftHint" class="site-staff-hint alert alert-light text-center" role="status">
-            <p class="mb-0">
-              Website menampilkan <strong>{{ statusCounts.published }}</strong> jadwal berstatus
-              <em>published</em>. Di CMS ada <strong>{{ statusCounts.all }}</strong> data
-              (<span v-if="statusCounts.draft">{{ statusCounts.draft }} draft</span><span v-if="statusCounts.draft && statusCounts.archived">, </span><span v-if="statusCounts.archived">{{ statusCounts.archived }} archived</span>).
-              Ubah status ke <strong>published</strong> di menu Jadwal Petugas Ibadah agar ikut tampil di sini.
-            </p>
-          </div>
-
           <div class="team-sec remove-ext7">
             <div class="row">
               <div
@@ -207,7 +208,17 @@ onMounted(() => {
                     <h5>{{ item.mainOfficer }}</h5>
                     <span>{{ item.roleLabel }}</span>
                     <p v-if="item.backup" class="site-staff-backup">Pengganti: {{ item.backup }}</p>
-                    <p v-if="item.excerptPlain" class="site-staff-excerpt">{{ item.excerptPlain }}</p>
+                    <p v-if="item.excerptPlain" class="site-staff-excerpt">
+                      {{ excerptDisplay(item.excerptPlain, item.id) }}
+                      <button
+                        v-if="excerptNeedsMore(item.excerptPlain)"
+                        type="button"
+                        class="site-staff-readmore"
+                        @click="toggleExcerpt(item.id)"
+                      >
+                        {{ expandedExcerpts.has(item.id) ? "Sembunyikan" : "Baca selengkapnya" }}
+                      </button>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -281,14 +292,6 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
-.site-staff-hint {
-  margin-bottom: 28px;
-  border: 1px dashed #c9a227;
-  background: #fffdf5;
-  color: #555;
-  padding: 14px 18px;
-}
-
 .site-staff-thmb {
   position: relative;
 }
@@ -344,12 +347,30 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+.site-staff-readmore {
+  display: inline;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--theme-color, #c9a227);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.site-staff-readmore:hover {
+  opacity: 0.85;
+}
+
 /* Scoped menimpa template — putih saat hover hijau */
 .team-bx:hover .team-inf > h5,
 .team-bx:hover .team-inf > span,
 .team-bx:hover .team-inf .site-staff-schedule-date,
 .team-bx:hover .team-inf .site-staff-backup,
-.team-bx:hover .team-inf .site-staff-excerpt {
+.team-bx:hover .team-inf .site-staff-excerpt,
+.team-bx:hover .team-inf .site-staff-readmore {
   color: #fff;
 }
 

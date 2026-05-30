@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => {
    * Origin backend untuk proxy `/api` (dev). Isi `VITE_PROXY_TARGET` di `.env`:
    * hostname/virtual host (`http://alfurqonbekasi.web.local`) atau Node langsung (`http://127.0.0.1:3000`).
    */
-  /** Tanpa `.env`: proxy ke Node lokal — hindari 404 dari host Docker lawas yang belum di-rebuild. */
-  const apiProxyTarget = env.VITE_PROXY_TARGET || "http://127.0.0.1:3000";
+  /** Tanpa `.env`: proxy ke API Docker lokal (host 3001) — port 3000 sering dipakai layanan lain. */
+  const apiProxyTarget = env.VITE_PROXY_TARGET || "http://127.0.0.1:3001";
 
   return {
     plugins: [adminSpaFallback(), vue()],
@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
                 req.url.includes("datatable")
               ) {
                 console.warn(
-                  `[vite] Proxy 404: ${req.method} ${req.url} → ${apiProxyTarget}. Pastikan backend jalan dengan route terbaru (rebuild container), atau set VITE_PROXY_TARGET di frontend/.env (mis. http://127.0.0.1:3000).`
+                  `[vite] Proxy 404: ${req.method} ${req.url} → ${apiProxyTarget}. Pastikan backend jalan (Docker: port 3001), atau set VITE_PROXY_TARGET di frontend/.env (mis. http://127.0.0.1:3001).`
                 );
               }
             });

@@ -8,6 +8,8 @@ import * as adminConfigController from "../controllers/admin-config.controller.j
 import * as adminContentController from "../controllers/admin-content.controller.js";
 import * as adminAnnouncementsController from "../controllers/admin-announcements.controller.js";
 import * as adminContactMessagesController from "../controllers/admin-contact-messages.controller.js";
+import * as adminHallBookingsController from "../controllers/admin-hall-bookings.controller.js";
+import * as adminHallsController from "../controllers/admin-halls.controller.js";
 import * as adminUploadController from "../controllers/admin-upload.controller.js";
 import * as adminJamaahMembersController from "../controllers/admin-jamaah-members.controller.js";
 import * as adminTpqStudentsController from "../controllers/admin-tpq-students.controller.js";
@@ -167,6 +169,50 @@ adminRouter.get("/contact-messages/:id", authorize("read", "ContactMessage"), (r
 
 adminRouter.delete("/contact-messages/:id", authorize("delete", "ContactMessage"), (req, res, next) => {
   void adminContactMessagesController.deleteContactMessageHandler(req, res).catch(next);
+});
+
+adminRouter.put("/halls/sync", (req, res, next) => {
+  void adminHallsController.syncHallsHandler(req, res).catch(next);
+});
+
+adminRouter.get("/halls", (req, res, next) => {
+  void adminHallsController.listAllHallsHandler(req, res).catch(next);
+});
+
+adminRouter.post("/halls/datatable", authorize("read", "Hall"), (req, res, next) => {
+  void adminHallsController.listHallsDatatable(req, res).catch(next);
+});
+
+adminRouter.post("/halls", authorize("create", "Hall"), (req, res, next) => {
+  void adminHallsController.postHall(req, res).catch(next);
+});
+
+adminRouter.get("/halls/:id", authorize("read", "Hall"), (req, res, next) => {
+  void adminHallsController.getHall(req, res).catch(next);
+});
+
+adminRouter.patch("/halls/:id", authorize("update", "Hall"), (req, res, next) => {
+  void adminHallsController.patchHall(req, res).catch(next);
+});
+
+adminRouter.delete("/halls/:id", authorize("delete", "Hall"), (req, res, next) => {
+  void adminHallsController.deleteHallHandler(req, res).catch(next);
+});
+
+adminRouter.post("/hall-bookings/datatable", authorize("read", "HallBooking"), (req, res, next) => {
+  void adminHallBookingsController.listHallBookingsDatatable(req, res).catch(next);
+});
+
+adminRouter.get("/hall-bookings/:id", authorize("read", "HallBooking"), (req, res, next) => {
+  void adminHallBookingsController.getHallBooking(req, res).catch(next);
+});
+
+adminRouter.patch("/hall-bookings/:id", authorize("update", "HallBooking"), (req, res, next) => {
+  void adminHallBookingsController.patchHallBooking(req, res).catch(next);
+});
+
+adminRouter.delete("/hall-bookings/:id", authorize("delete", "HallBooking"), (req, res, next) => {
+  void adminHallBookingsController.deleteHallBookingHandler(req, res).catch(next);
 });
 
 adminRouter.post("/jamaah/members/datatable", authorize("read", "JamaahData"), (req, res, next) => {

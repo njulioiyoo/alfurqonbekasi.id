@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
-import { getAdminConfig, putAdminConfig, uploadAdminImage } from "../../api/admin.js";
+import { getAdminConfig, listAdminHalls, putAdminConfig, syncAdminFacilities, uploadAdminImage } from "../../api/admin.js";
 import { useAccessStore } from "../../stores/access.js";
+import {
+  EVENT_COVER_ACCEPT,
+  EVENT_COVER_SIZE_HINT,
+  EVENT_COVER_WIDTH,
+  EVENT_THUMB_HEIGHT,
+  EVENT_THUMB_WIDTH,
+  validateEventCoverImageFile,
+} from "../../utils/event-cover-image.js";
+
+const route = useRoute();
 
 interface JQueryLite {
   fn?: {
@@ -15,7 +26,7 @@ function jq(): Window["jQuery"] {
   return window.jQuery;
 }
 
-type ConfigTab = "website" | "home" | "branding" | "visimisi" | "seo" | "social" | "integrations" | "advanced";
+type ConfigTab = "website" | "home" | "facilities" | "branding" | "visimisi" | "seo" | "social" | "integrations" | "advanced";
 
 const activeTab = ref<ConfigTab>("website");
 const saving = ref(false);
@@ -25,6 +36,9 @@ const loading = ref(false);
 const access = useAccessStore();
 const { flags: accessFlags } = storeToRefs(access);
 const canUpdateSetting = computed(() => accessFlags.value.canUpdateSetting);
+const canUpdateFacilities = computed(
+  () => accessFlags.value.canUpdateSetting || accessFlags.value.canUpdateHall
+);
 
 const form = ref({
   websiteName: "Masjid Alfurqon Bekasi",
@@ -80,6 +94,7 @@ const form = ref({
 const tabs: { id: ConfigTab; label: string; icon: string }[] = [
   { id: "website", label: "Website", icon: "flaticon2-architecture-and-city" },
   { id: "home", label: "Banner beranda", icon: "flaticon2-photo-camera" },
+  { id: "facilities", label: "Fasilitas", icon: "flaticon2-grids" },
   { id: "branding", label: "Branding", icon: "flaticon2-graphic" },
   { id: "visimisi", label: "Visi & Misi", icon: "flaticon2-rocket-1" },
   { id: "seo", label: "SEO", icon: "flaticon2-search-1" },
@@ -126,6 +141,151 @@ function parseBannerSlidesFromJson(raw: string | undefined): CmsHomeBannerSlide[
 }
 
 const bannerSlides = ref<CmsHomeBannerSlide[]>([emptyBannerSlide()]);
+
+type CmsFacility = {
+  id?: string;
+  name: string;
+  slug: string;
+  capacity: number | null;
+  description: string;
+  coverImageUrl: string;
+  amenitiesText: string;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+function emptyFacility(): CmsFacility {
+  return {
+    name: "",
+    slug: "",
+    capacity: null,
+    description: "",
+    coverImageUrl: "",
+    amenitiesText: "",
+    isActive: true,
+    sortOrder: 10,
+  };
+}
+
+function mapHallToFacility(h: {
+  id: string;
+  name: string;
+  slug: string;
+  capacity: number | null;
+  description: string;
+  coverImageUrl: string;
+  amenities: string[];
+  isActive: boolean;
+  sortOrder: number;
+}): CmsFacility {
+  return {
+    id: h.id,
+    name: h.name,
+    slug: h.slug,
+    capacity: h.capacity,
+    description: h.description,
+    coverImageUrl: h.coverImageUrl,
+    amenitiesText: (h.amenities ?? []).join("\n"),
+    isActive: h.isActive,
+    sortOrder: h.sortOrder,
+  };
+}
+
+const facilities = ref<CmsFacility[]>([emptyFacility()]);
+const facilityUploading = ref<number | null>(null);
+
+function facilityCoverPreview(url: string): string {
+  const v = url.trim();
+  return v.length > 0
+    ? v
+    : "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='320'%3E%3Crect width='100%25' height='100%25' fill='%23f1f3f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23979fb8' font-family='Arial' font-size='14'%3EBelum ada gambar%3C/text%3E%3C/svg%3E";
+}
+
+function addFacility(): void {
+  facilities.value.push({ ...emptyFacility(), sortOrder: (facilities.value.length + 1) * 10 });
+}
+
+function removeFacility(index: number): void {
+  if (facilities.value.length <= 1) {
+    facilities.value = [emptyFacility()];
+    return;
+  }
+  facilities.value.splice(index, 1);
+}
+
+function parseFacilityAmenities(text: string): string[] {
+  return text
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 30);
+}
+
+async function onFacilityCoverPick(index: number, ev: Event): Promise<void> {
+  const t = ev.target;
+  if (!(t instanceof HTMLInputElement) || !t.files?.[0]) return;
+  const file = t.files[0];
+  t.value = "";
+  const dimErr = await validateEventCoverImageFile(file);
+  if (dimErr) {
+    toastError(dimErr);
+    return;
+  }
+  facilityUploading.value = index;
+  toastLoading("Mengupload gambar fasilitas…");
+  try {
+    const json = await uploadAdminImage(file, { context: "hall_cover" });
+    if (!json.ok || !json.data?.url) {
+      toastError(json.error?.message || "Upload gagal");
+      return;
+    }
+    facilities.value[index] = { ...facilities.value[index]!, coverImageUrl: json.data.url };
+    toastSuccess("Gambar fasilitas berhasil diupload.");
+  } catch {
+    toastError("Tidak dapat menghubungi server saat upload");
+  } finally {
+    facilityUploading.value = null;
+  }
+}
+
+async function loadFacilities(): Promise<void> {
+  try {
+    const json = await listAdminHalls();
+    if (json.ok && json.data?.items?.length) {
+      facilities.value = json.data.items.map(mapHallToFacility);
+    } else {
+      facilities.value = [emptyFacility()];
+    }
+  } catch {
+    facilities.value = [emptyFacility()];
+  }
+}
+
+async function saveFacilities(): Promise<boolean> {
+  if (!canUpdateFacilities.value) return true;
+  const items = facilities.value
+    .filter((f) => f.name.trim().length >= 2)
+    .map((f, idx) => ({
+      id: f.id,
+      name: f.name.trim(),
+      slug: f.slug.trim() || undefined,
+      capacity: f.capacity && f.capacity > 0 ? f.capacity : null,
+      description: f.description.trim(),
+      coverImageUrl: f.coverImageUrl.trim(),
+      amenities: parseFacilityAmenities(f.amenitiesText),
+      isActive: f.isActive,
+      sortOrder: f.sortOrder || (idx + 1) * 10,
+    }));
+  const json = await syncAdminFacilities({ items });
+  if (!json.ok) {
+    toastError(json.error?.message || "Gagal menyimpan fasilitas");
+    return false;
+  }
+  if (json.data?.items) {
+    facilities.value = json.data.items.length ? json.data.items.map(mapHallToFacility) : [emptyFacility()];
+  }
+  return true;
+}
 
 const BANNER_W = 1920;
 const BANNER_H = 990;
@@ -416,6 +576,7 @@ async function loadConfig(): Promise<void> {
       (form.value[key] as string) = raw;
     }
     bannerSlides.value = parseBannerSlidesFromJson(values.homeBannersJson);
+    await loadFacilities();
   } catch {
     loadError.value = "Tidak dapat menghubungi server";
   } finally {
@@ -473,6 +634,8 @@ async function onSaveDraft(): Promise<void> {
   saving.value = true;
   toastLoading("Menyimpan konfigurasi…");
   try {
+    const facilitiesOk = await saveFacilities();
+    if (!facilitiesOk) return;
     const json = await putAdminConfig(formToMap());
     if (!json.ok) {
       toastError(json.error?.message || "Gagal menyimpan draft");
@@ -496,6 +659,8 @@ async function onPublish(): Promise<void> {
   saving.value = true;
   toastLoading("Publish konfigurasi…");
   try {
+    const facilitiesOk = await saveFacilities();
+    if (!facilitiesOk) return;
     const payload = formToMap();
     payload.configPublishedAt = new Date().toISOString();
     const json = await putAdminConfig(payload);
@@ -513,6 +678,8 @@ async function onPublish(): Promise<void> {
 }
 
 onMounted(() => {
+  const tab = typeof route.query.tab === "string" ? route.query.tab : "";
+  if (tab === "facilities") activeTab.value = "facilities";
   void access.load();
   void loadConfig();
 });
@@ -715,6 +882,110 @@ onUnmounted(() => {
             <div class="col-12">
               <button type="button" class="btn btn-sm btn-brand" @click="addBannerSlide">
                 <i class="la la-plus"></i> Tambah slide
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="activeTab === 'facilities'" class="row">
+            <div class="col-12">
+              <p class="text-muted kt-margin-b-15">
+                Daftar fasilitas/aula yang tampil di halaman penyewaan website. Tambah baris seperti slide banner; simpan lewat tombol Simpan/Publish di bawah.
+              </p>
+            </div>
+            <div
+              v-for="(facility, idx) in facilities"
+              :key="facility.id ?? `new-${idx}`"
+              class="col-12 kt-margin-b-20 cms-banner-slide-card"
+            >
+              <div class="kt-portlet kt-portlet--bordered kt-portlet--height-fluid">
+                <div class="kt-portlet__head kt-portlet__head--noborder kt-padding-b-0">
+                  <div class="kt-portlet__head-label">
+                    <span class="kt-portlet__head-icon"><i class="la la-building"></i></span>
+                    <h3 class="kt-portlet__head-title">Facility {{ idx + 1 }}</h3>
+                  </div>
+                  <div class="kt-portlet__head-toolbar">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-label-danger"
+                      :disabled="!canUpdateFacilities"
+                      @click="removeFacility(idx)"
+                    >
+                      <i class="la la-trash"></i> Hapus
+                    </button>
+                  </div>
+                </div>
+                <div class="kt-portlet__body">
+                  <div class="row">
+                    <div class="col-lg-5">
+                      <div class="form-group">
+                        <label>Gambar sampul</label>
+                        <input v-model="facility.coverImageUrl" type="text" class="form-control" readonly placeholder="URL setelah upload" />
+                        <div class="custom-file kt-margin-t-10">
+                          <input
+                            :id="'cfg_facility_img_' + idx"
+                            type="file"
+                            class="custom-file-input"
+                            :accept="EVENT_COVER_ACCEPT"
+                            :disabled="!canUpdateFacilities || facilityUploading === idx"
+                            @change="onFacilityCoverPick(idx, $event)"
+                          />
+                          <label class="custom-file-label" :for="'cfg_facility_img_' + idx">
+                            {{ facilityUploading === idx ? "Mengupload…" : "Upload gambar" }}
+                          </label>
+                        </div>
+                        <span class="form-text text-muted">{{ EVENT_COVER_SIZE_HINT }}</span>
+                        <div class="cms-facility-preview kt-margin-t-10">
+                          <img :src="facilityCoverPreview(facility.coverImageUrl)" alt="" />
+                        </div>
+                        <span class="form-text text-muted">
+                          Pratinjau kartu {{ EVENT_THUMB_WIDTH }}×{{ EVENT_THUMB_HEIGHT }} · lebar {{ EVENT_COVER_WIDTH }}×{{ EVENT_COVER_HEIGHT }} px
+                        </span>
+                      </div>
+                    </div>
+                    <div class="col-lg-7">
+                      <div class="row">
+                        <div class="col-md-8 form-group">
+                          <label>Nama fasilitas <span class="text-danger">*</span></label>
+                          <input v-model="facility.name" type="text" class="form-control" maxlength="255" :disabled="!canUpdateFacilities" />
+                        </div>
+                        <div class="col-md-4 form-group">
+                          <label>Urutan</label>
+                          <input v-model.number="facility.sortOrder" type="number" min="0" class="form-control" :disabled="!canUpdateFacilities" />
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6 form-group">
+                          <label>Slug</label>
+                          <input v-model="facility.slug" type="text" class="form-control" placeholder="otomatis dari nama" :disabled="!canUpdateFacilities" />
+                        </div>
+                        <div class="col-md-6 form-group">
+                          <label>Kapasitas (orang)</label>
+                          <input v-model.number="facility.capacity" type="number" min="1" class="form-control" :disabled="!canUpdateFacilities" />
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label>Deskripsi</label>
+                        <textarea v-model="facility.description" class="form-control" rows="2" maxlength="5000" :disabled="!canUpdateFacilities"></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label>Fasilitas pendukung (satu per baris)</label>
+                        <textarea v-model="facility.amenitiesText" class="form-control" rows="3" placeholder="Sound system&#10;AC" :disabled="!canUpdateFacilities"></textarea>
+                      </div>
+                      <div class="form-group mb-0">
+                        <label class="kt-checkbox">
+                          <input v-model="facility.isActive" type="checkbox" :disabled="!canUpdateFacilities" />
+                          Aktif (tampil di website)
+                          <span></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12">
+              <button type="button" class="btn btn-sm btn-brand" :disabled="!canUpdateFacilities" @click="addFacility">
+                <i class="la la-plus"></i> Tambah facility
               </button>
             </div>
           </div>
@@ -1060,5 +1331,21 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.cms-facility-preview {
+  border: 1px solid #e2e5ec;
+  border-radius: 6px;
+  overflow: hidden;
+  max-width: 320px;
+  aspect-ratio: 870 / 400;
+  background: #f4f5f8;
+}
+
+.cms-facility-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 </style>

@@ -119,6 +119,13 @@ INSERT INTO permissions (name, guard_name) VALUES
   ('read:ContactMessage', 'web'),
   ('update:ContactMessage', 'web'),
   ('delete:ContactMessage', 'web'),
+  ('create:Hall', 'web'),
+  ('read:Hall', 'web'),
+  ('update:Hall', 'web'),
+  ('delete:Hall', 'web'),
+  ('read:HallBooking', 'web'),
+  ('update:HallBooking', 'web'),
+  ('delete:HallBooking', 'web'),
   ('read:User', 'web'),
   ('update:User', 'web'),
   ('delete:User', 'web'),
@@ -154,6 +161,8 @@ WHERE r.name = 'admin' AND p.name IN (
   'create:PrayerSchedule', 'read:PrayerSchedule', 'update:PrayerSchedule', 'delete:PrayerSchedule',
   'create:Gallery', 'read:Gallery', 'update:Gallery', 'delete:Gallery',
   'read:ContactMessage', 'update:ContactMessage', 'delete:ContactMessage',
+  'create:Hall', 'read:Hall', 'update:Hall', 'delete:Hall',
+  'read:HallBooking', 'update:HallBooking', 'delete:HallBooking',
   'read:Menu', 'read:Setting', 'update:Setting'
 )
 ON CONFLICT DO NOTHING;
@@ -437,6 +446,78 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages (status);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_created_at ON contact_messages (created_at);
 
+CREATE TABLE IF NOT EXISTS halls (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  capacity INT,
+  description TEXT,
+  cover_image_url TEXT,
+  amenities_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS hall_booking_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  hall_id UUID NOT NULL REFERENCES halls(id) ON DELETE RESTRICT,
+  applicant_name VARCHAR(120) NOT NULL,
+  applicant_phone VARCHAR(40) NOT NULL,
+  applicant_email VARCHAR(255),
+  organization VARCHAR(200),
+  event_type VARCHAR(40) NOT NULL,
+  event_title VARCHAR(255) NOT NULL,
+  event_date_start DATE NOT NULL,
+  event_date_end DATE NOT NULL,
+  time_start TIME,
+  time_end TIME,
+  expected_attendees INT,
+  notes TEXT,
+  status VARCHAR(30) NOT NULL DEFAULT 'pending',
+  admin_notes TEXT,
+  email_sent BOOLEAN NOT NULL DEFAULT false,
+  email_error TEXT,
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_hall_bookings_hall_status ON hall_booking_requests (hall_id, status);
+CREATE INDEX IF NOT EXISTS idx_hall_bookings_dates ON hall_booking_requests (event_date_start, event_date_end);
+CREATE INDEX IF NOT EXISTS idx_hall_bookings_created_at ON hall_booking_requests (created_at);
+
+INSERT INTO halls (name, slug, capacity, description, amenities_json, is_active, sort_order)
+VALUES
+  (
+    'Aula Utama Masjid',
+    'aula-utama',
+    500,
+    'Aula utama untuk acara besar seperti pernikahan, pengajian umum, dan kegiatan jamaah.',
+    '["Sound system","AC","Panggung","Parkir luas"]'::jsonb,
+    true,
+    10
+  ),
+  (
+    'Aula TPQ / Lantai 2',
+    'aula-tpq',
+    120,
+    'Ruang serbaguna lantai 2, cocok untuk pengajian, rapat, dan pelatihan.',
+    '["AC","Proyektor","Kursi"]'::jsonb,
+    true,
+    20
+  )
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  capacity = EXCLUDED.capacity,
+  description = EXCLUDED.description,
+  amenities_json = EXCLUDED.amenities_json,
+  is_active = EXCLUDED.is_active,
+  sort_order = EXCLUDED.sort_order,
+  updated_at = NOW();
+
 INSERT INTO admin_menu_items (slug, menu_group, label, path, icon, permission_name, router_name, sort_order)
 VALUES
   ('dashboard', 'primary', 'Dashboard', '/admin/dashboard', 'layout-dashboard', 'read:Dashboard', 'dashboard', 10),
@@ -445,6 +526,7 @@ VALUES
   ('ops-prayer-staff', 'operasional', 'Jadwal Petugas Ibadah', '/admin/operasional/petugas-ibadah', 'users', 'read:PrayerSchedule', 'ops-prayer-staff', 30),
   ('ops-gallery', 'operasional', 'Galeri Kegiatan', '/admin/operasional/galeri', 'image', 'read:Gallery', 'ops-gallery', 35),
   ('ops-contact-messages', 'operasional', 'Pesan Kontak', '/admin/operasional/pesan-kontak', 'mail', 'read:ContactMessage', 'ops-contact-messages', 38),
+  ('ops-hall-bookings', 'operasional', 'Penyewaan Aula', '/admin/operasional/penyewaan-aula', 'building', 'read:HallBooking', 'ops-hall-bookings', 40),
   ('ops-broadcast', 'operasional', 'Broadcast Notifikasi', '/admin/operasional/broadcast', 'paper-plane', 'read:OpsBroadcast', 'ops-broadcast', 50),
   ('jamaah-data', 'jamaah', 'Data Jamaah', '/admin/jamaah/data', 'users', 'read:JamaahData', 'jamaah-data', 10),
   ('jamaah-event-attendance', 'jamaah', 'Pendaftaran Event & Absensi', '/admin/jamaah/event-absensi', 'clipboard', 'read:JamaahEventAttendance', 'jamaah-event-attendance', 20),
@@ -474,6 +556,8 @@ ON CONFLICT (slug) DO UPDATE SET
   sort_order = EXCLUDED.sort_order;
 
 DELETE FROM admin_menu_items WHERE slug = 'content';
+
+DELETE FROM admin_menu_items WHERE slug = 'ops-halls';
 
 INSERT INTO app_config (key, value) VALUES ('homeBannersJson', '[]')
 ON CONFLICT (key) DO NOTHING;

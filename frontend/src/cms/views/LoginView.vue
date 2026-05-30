@@ -7,6 +7,7 @@ import { KT_APP_OPTIONS_DEMO1 } from "../metronic/loginKtOptions.js";
 import { metronicAsset } from "../metronic/urls.js";
 import { loginRequest } from "../api/auth.js";
 import { useAuthStore } from "../stores/auth.js";
+import { useAccessStore } from "../stores/access.js";
 
 /** Persis pola login-5.html: hanya `kt-login--signin` ↔ `kt-login--forgot` (tanpa signup). */
 type LoginMode = "signin" | "forgot";
@@ -14,6 +15,7 @@ type LoginMode = "signin" | "forgot";
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
+const access = useAccessStore();
 
 const mode = ref<LoginMode>("signin");
 const username = ref("");
@@ -80,6 +82,8 @@ async function onSubmitSignin(): Promise<void> {
       return;
     }
     auth.login(res.data.user);
+    access.reset();
+    await access.load();
     const redir = typeof route.query.redirect === "string" ? route.query.redirect : "";
     await router.replace(redir.startsWith("/") ? redir : { name: "dashboard" });
   } catch {

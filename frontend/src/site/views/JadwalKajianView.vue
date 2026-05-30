@@ -13,6 +13,7 @@ import { plainTextFromHtml } from "../utils/html-text.js";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
+const EXCERPT_MAX = 200;
 
 type EventCard = PublicContentItem & {
   imageUrl: string;
@@ -35,12 +36,8 @@ const events = ref<EventCard[]>([]);
 const currentPage = ref(1);
 const totalItems = ref(0);
 const totalPages = ref(0);
-const statusCounts = ref({ published: 0, draft: 0, archived: 0, all: 0 });
 const listTopRef = ref<HTMLElement | null>(null);
-
-const showDraftHint = computed(
-  () => !loading.value && !loadError.value && statusCounts.value.all > statusCounts.value.published
-);
+const expandedExcerpts = ref<Set<number>>(new Set());
 
 const showEmpty = computed(() => !loading.value && !loadError.value && totalItems.value === 0);
 const showPagination = computed(() => !loading.value && !loadError.value && totalPages.value > 1);
@@ -84,6 +81,22 @@ function scrollToListTop(): void {
   listTopRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function excerptNeedsMore(text: string): boolean {
+  return text.length > EXCERPT_MAX;
+}
+
+function excerptDisplay(text: string, id: number): string {
+  if (!excerptNeedsMore(text) || expandedExcerpts.value.has(id)) return text;
+  return `${text.slice(0, EXCERPT_MAX).trimEnd()}…`;
+}
+
+function toggleExcerpt(id: number): void {
+  const next = new Set(expandedExcerpts.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  expandedExcerpts.value = next;
+}
+
 async function loadPage(page: number): Promise<void> {
   loading.value = true;
   loadError.value = "";
@@ -101,9 +114,6 @@ async function loadPage(page: number): Promise<void> {
     currentPage.value = json.data.page;
     totalItems.value = json.data.total;
     totalPages.value = json.data.totalPages;
-    if (json.data.statusCounts) {
-      statusCounts.value = json.data.statusCounts;
-    }
   } catch {
     loadError.value = "Tidak dapat menghubungi server";
     events.value = [];
@@ -161,15 +171,6 @@ onMounted(() => {
         </div>
 
         <template v-else>
-          <div v-if="showDraftHint" class="site-events-hint alert alert-light text-center" role="status">
-            <p class="mb-0">
-              Website menampilkan <strong>{{ statusCounts.published }}</strong> jadwal berstatus
-              <em>published</em>. Di CMS ada <strong>{{ statusCounts.all }}</strong> data
-              (<span v-if="statusCounts.draft">{{ statusCounts.draft }} draft</span><span v-if="statusCounts.draft && statusCounts.archived">, </span><span v-if="statusCounts.archived">{{ statusCounts.archived }} archived</span>).
-              Ubah status ke <strong>published</strong> di menu Jadwal Kegiatan/Kajian agar ikut tampil di sini.
-            </p>
-          </div>
-
           <div class="event-sec remove-ext5">
             <div class="row">
               <div
@@ -204,7 +205,17 @@ onMounted(() => {
                       <li v-if="ev.speaker"><i class="far fa-user theme-clr"></i> {{ ev.speaker }}</li>
                       <li><i class="far fa-clock theme-clr"></i> {{ ev.timeLabel }}</li>
                     </ul>
-                    <p v-if="ev.excerptPlain">{{ ev.excerptPlain }}</p>
+                    <p v-if="ev.excerptPlain" class="site-event-excerpt">
+                      {{ excerptDisplay(ev.excerptPlain, ev.id) }}
+                      <button
+                        v-if="excerptNeedsMore(ev.excerptPlain)"
+                        type="button"
+                        class="site-event-readmore"
+                        @click="toggleExcerpt(ev.id)"
+                      >
+                        {{ expandedExcerpts.has(ev.id) ? "Sembunyikan" : "Baca selengkapnya" }}
+                      </button>
+                    </p>
                     <a
                       v-if="ev.detailExternal"
                       :href="ev.detailUrl"
@@ -302,20 +313,30 @@ onMounted(() => {
   font-style: italic;
 }
 
+.site-event-excerpt {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.site-event-readmore {
+  display: inline;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--theme-color, #c9a227);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.site-event-readmore:hover {
+  opacity: 0.85;
+}
+
 .pagination > li.disabled {
   opacity: 0.45;
   pointer-events: none;
-}
-
-.site-events-hint {
-  margin-bottom: 28px;
-  border: 1px dashed #c9a227;
-  background: #fffdf5;
-  color: #555;
-  padding: 14px 18px;
-}
-
-.site-events-hint strong {
-  color: #333;
 }
 </style>

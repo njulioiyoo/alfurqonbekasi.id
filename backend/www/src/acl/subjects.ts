@@ -14,6 +14,8 @@ export type AppSubject =
   | "ProgramQurbanZakat"
   | "Gallery"
   | "ContactMessage"
+  | "Hall"
+  | "HallBooking"
   | "User"
   | "Role"
   | "Permission"

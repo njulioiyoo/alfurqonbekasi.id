@@ -104,3 +104,67 @@ export async function sendContactNotificationEmail(
     return { sent: false, error: msg };
   }
 }
+
+export type HallBookingMailPayload = {
+  hallName: string;
+  applicantName: string;
+  applicantPhone: string;
+  applicantEmail: string;
+  organization: string;
+  eventType: string;
+  eventTitle: string;
+  eventDateStart: string;
+  eventDateEnd: string;
+  timeStart: string;
+  timeEnd: string;
+  expectedAttendees: number | null;
+  notes: string;
+};
+
+export async function sendHallBookingNotificationEmail(
+  payload: HallBookingMailPayload
+): Promise<{ sent: boolean; error?: string }> {
+  const cfg = await loadMailConfig();
+  if (!cfg) {
+    return { sent: false, error: "SMTP belum dikonfigurasi" };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: cfg.smtpHost,
+    port: cfg.smtpPort,
+    secure: cfg.smtpPort === 465,
+    auth: { user: cfg.smtpUser, pass: cfg.smtpPass },
+  });
+
+  const lines = [
+    `Pengajuan penyewaan aula baru — ${cfg.siteName}`,
+    "",
+    `Aula: ${payload.hallName}`,
+    `Acara: ${payload.eventTitle} (${payload.eventType})`,
+    `Tanggal: ${payload.eventDateStart}${payload.eventDateEnd !== payload.eventDateStart ? ` s/d ${payload.eventDateEnd}` : ""}`,
+    payload.timeStart ? `Jam: ${payload.timeStart}${payload.timeEnd ? ` – ${payload.timeEnd}` : ""}` : "",
+    payload.expectedAttendees ? `Perkiraan tamu: ${payload.expectedAttendees}` : "",
+    "",
+    `Pemohon: ${payload.applicantName}`,
+    `Telepon: ${payload.applicantPhone}`,
+    payload.applicantEmail ? `Email: ${payload.applicantEmail}` : "",
+    payload.organization ? `Organisasi: ${payload.organization}` : "",
+    payload.notes ? `\nCatatan:\n${payload.notes}` : "",
+  ].filter(Boolean);
+
+  try {
+    await transporter.sendMail({
+      from: cfg.smtpFrom,
+      to: cfg.notifyEmail,
+      replyTo: payload.applicantEmail || undefined,
+      subject: `[Penyewaan Aula] ${payload.eventTitle} — ${payload.hallName}`,
+      text: lines.join("\n"),
+      html: `<pre style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">${lines.join("\n").replace(/</g, "&lt;")}</pre>`,
+    });
+    return { sent: true };
+  } catch (e) {
+    const msg = friendlySmtpError(e);
+    console.error("sendHallBookingNotificationEmail:", e);
+    return { sent: false, error: msg };
+  }
+}

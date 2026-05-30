@@ -13,11 +13,12 @@ import TpqStudentsAdminView from "../views/program/TpqStudentsAdminView.vue";
 import QurbanZakatAdminView from "../views/program/QurbanZakatAdminView.vue";
 import AnnouncementsAdminView from "../views/announcement/AnnouncementsAdminView.vue";
 import ContactMessagesAdminView from "../views/operasional/ContactMessagesAdminView.vue";
+import HallBookingsAdminView from "../views/operasional/HallBookingsAdminView.vue";
 import JamaahDataAdminView from "../views/jamaah/JamaahDataAdminView.vue";
 import FinanceCashAdminView from "../views/finance/FinanceCashAdminView.vue";
 import FinanceReportsAdminView from "../views/finance/FinanceReportsAdminView.vue";
 import { useAuthStore } from "../stores/auth.js";
-import { useAccessStore } from "../stores/access.js";
+import { useAccessStore, type AccessFlags } from "../stores/access.js";
 import { CMS_ACCESS_DENIED_MESSAGE } from "../constants/access-messages.js";
 import { toastError } from "../utils/toast.js";
 
@@ -160,6 +161,24 @@ export const router = createRouter({
           },
         },
         {
+          path: "master/aula",
+          redirect: { name: "master-config", query: { tab: "facilities" } },
+        },
+        {
+          path: "operasional/master-aula",
+          redirect: { name: "master-config", query: { tab: "facilities" } },
+        },
+        {
+          path: "operasional/penyewaan-aula",
+          name: "ops-hall-bookings",
+          component: HallBookingsAdminView,
+          meta: {
+            requiresAuth: true,
+            title: "Penyewaan Aula",
+            desc: "Pengajuan sewa aula dari website — tinjau dan setujui jadwal.",
+          },
+        },
+        {
           path: "operasional/broadcast",
           name: "ops-broadcast",
           component: ModulePlaceholderView,
@@ -282,14 +301,29 @@ const ACCESS_LOAD_TIMEOUT_MS = 12_000;
 
 const ROUTES_WITHOUT_MENU = new Set(["forbidden"]);
 
+/** Route yang boleh diakses lewat flag CASL walau belum ada di menu DB. */
+function extraAllowedRouteNames(flags: AccessFlags): string[] {
+  const names: string[] = [];
+  if (flags.canReadHallBooking) names.push("ops-hall-bookings");
+  return names;
+}
+
 function resolveHomeRouteName(allowed: Set<string>, fallback: string): string {
   if (allowed.has("dashboard")) return "dashboard";
   if (allowed.has(fallback)) return fallback;
   return allowed.values().next().value ?? "dashboard";
 }
 
-async function waitForAccessMenu(access: ReturnType<typeof useAccessStore>): Promise<void> {
-  if (access.menu.length > 0 && !access.loading) return;
+async function waitForAccessMenu(
+  access: ReturnType<typeof useAccessStore>,
+  targetName: string
+): Promise<void> {
+  const inMenu = (name: string) => access.menu.some((m) => m.routerName === name);
+  const needsRefresh =
+    access.menu.length === 0 ||
+    (targetName.length > 0 && !ROUTES_WITHOUT_MENU.has(targetName) && !inMenu(targetName));
+
+  if (access.menu.length > 0 && !access.loading && !needsRefresh) return;
   if (!access.loading) {
     await Promise.race([
       access.load(),
@@ -319,9 +353,14 @@ router.beforeEach(async (to) => {
   }
 
   if (auth.isAuthenticated) {
-    await waitForAccessMenu(access);
+    const targetNameEarly = typeof to.name === "string" ? to.name : "";
+    await waitForAccessMenu(access, targetNameEarly);
 
     const allowedRouteNames = new Set(access.menu.map((m) => m.routerName));
+    for (const name of extraAllowedRouteNames(access.flags)) {
+      allowedRouteNames.add(name);
+    }
+    const manageAll = access.isManageAll;
     const firstAllowed = access.menu[0]?.routerName || "dashboard";
     const homeRouteName = resolveHomeRouteName(allowedRouteNames, firstAllowed);
 
@@ -332,7 +371,9 @@ router.beforeEach(async (to) => {
     const targetName = typeof to.name === "string" ? to.name : "";
     const skipMenuCheck = to.meta.skipMenuCheck === true || ROUTES_WITHOUT_MENU.has(targetName);
     const isAllowedRoute =
-      skipMenuCheck || (targetName.length > 0 && allowedRouteNames.has(targetName));
+      skipMenuCheck ||
+      (manageAll && targetName.length > 0) ||
+      (targetName.length > 0 && allowedRouteNames.has(targetName));
 
     if (to.name === "login") {
       const redir = typeof to.query.redirect === "string" ? to.query.redirect : "";

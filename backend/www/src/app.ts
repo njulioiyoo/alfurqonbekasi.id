@@ -5,6 +5,7 @@ import { authRouter } from "./routes/auth.routes.js";
 import { adminRouter } from "./routes/admin.routes.js";
 import * as publicConfigController from "./controllers/public-config.controller.js";
 import * as publicContactController from "./controllers/public-contact.controller.js";
+import * as publicHallRentalController from "./controllers/public-hall-rental.controller.js";
 import * as publicContentController from "./controllers/public-content.controller.js";
 import * as publicIslamicDaysController from "./controllers/public-islamic-days.controller.js";
 import { maintenanceMiddleware } from "./middleware/maintenance.middleware.js";
@@ -54,6 +55,15 @@ export function createApp(): express.Application {
   api.post("/public/contact", (req, res, next) => {
     void publicContactController.postPublicContact(req, res).catch(next);
   });
+  api.get("/public/halls", (req, res, next) => {
+    void publicHallRentalController.getPublicHalls(req, res).catch(next);
+  });
+  api.get("/public/hall-bookings/availability", (req, res, next) => {
+    void publicHallRentalController.getPublicHallAvailability(req, res).catch(next);
+  });
+  api.post("/public/hall-bookings", (req, res, next) => {
+    void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
+  });
   api.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);
   });
@@ -76,6 +86,15 @@ export function createApp(): express.Application {
   });
   app.post("/public/contact", (req, res, next) => {
     void publicContactController.postPublicContact(req, res).catch(next);
+  });
+  app.get("/public/halls", (req, res, next) => {
+    void publicHallRentalController.getPublicHalls(req, res).catch(next);
+  });
+  app.get("/public/hall-bookings/availability", (req, res, next) => {
+    void publicHallRentalController.getPublicHallAvailability(req, res).catch(next);
+  });
+  app.post("/public/hall-bookings", (req, res, next) => {
+    void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
   });
   app.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);

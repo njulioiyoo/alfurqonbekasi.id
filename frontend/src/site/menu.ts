@@ -27,6 +27,7 @@ export const siteMenu: MenuGroup[] = [
   {
     label: "Layanan & Program",
     children: [
+      { label: "Penyewaan Aula", routeName: "penyewaan-aula", icon: "flaticon-mosque" },
       { label: "Layanan Jenazah", routeName: "layanan-jenazah", icon: "flaticon-grave" },
       { label: "Program Sosial", routeName: "program-sosial", icon: "flaticon-begging" },
       { label: "TPQ / Madrasah", routeName: "tpq", icon: "flaticon-open-book" },

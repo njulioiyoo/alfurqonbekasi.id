@@ -10,6 +10,7 @@ import {
   type SiteConfig,
 } from "../api.js";
 import EventCountdown from "../components/EventCountdown.vue";
+import SiteImg from "../components/SiteImg.vue";
 import { plainTextFromHtml } from "../utils/html-text.js";
 import {
   eventFallbackImage,
@@ -18,6 +19,7 @@ import {
   isExternalUrl,
   parseEventDateParts,
 } from "../utils/event-display.js";
+import { imagePlaceholderDataUrl } from "../utils/image-placeholder.js";
 
 const B = "/bismillah/assets";
 
@@ -153,6 +155,8 @@ const soundcloudEmbedUrl =
 
 const cfg = ref<SiteConfig | null>(null);
 const bannerCarouselEl = ref<HTMLElement | null>(null);
+/** URL background banner per slide (setelah cek load / fallback). */
+const bannerBgByIndex = ref<Record<number, string>>({});
 
 const fallbackSlides: HomeBannerSlide[] = [
   {
@@ -176,10 +180,6 @@ const displaySlides = computed(() => {
   return from.length > 0 ? from : fallbackSlides;
 });
 
-function isExternalUrl(url: string): boolean {
-  return /^https?:\/\//i.test(url.trim());
-}
-
 function internalPath(url: string): string {
   const t = url.trim();
   if (!t) return "/";
@@ -189,6 +189,59 @@ function internalPath(url: string): string {
 
 function slideCtaLabel(slide: HomeBannerSlide): string {
   return slide.linkLabel?.trim() || "Selengkapnya";
+}
+
+function defaultBannerFallback(index: number): string {
+  return fallbackSlides[index % fallbackSlides.length]?.imageUrl ?? fallbackSlides[0].imageUrl;
+}
+
+function slideBgUrl(index: number, slide: HomeBannerSlide): string {
+  return bannerBgByIndex.value[index] ?? (slide.imageUrl?.trim() || defaultBannerFallback(index));
+}
+
+function validateBannerImages(): void {
+  const slides = displaySlides.value;
+  const next: Record<number, string> = {};
+  for (let i = 0; i < slides.length; i++) {
+    const slide = slides[i];
+    const raw = slide.imageUrl?.trim() ?? "";
+    const fb = defaultBannerFallback(i);
+    const ph = imagePlaceholderDataUrl("Banner tidak tersedia");
+
+    if (!raw) {
+      next[i] = fb;
+      continue;
+    }
+
+    next[i] = raw;
+    const img = new Image();
+    img.onload = () => {
+      bannerBgByIndex.value = { ...bannerBgByIndex.value, [i]: raw };
+      refreshBannerOwlHeight();
+    };
+    img.onerror = () => {
+      const fbImg = new Image();
+      fbImg.onload = () => {
+        bannerBgByIndex.value = { ...bannerBgByIndex.value, [i]: fb };
+        refreshBannerOwlHeight();
+      };
+      fbImg.onerror = () => {
+        bannerBgByIndex.value = { ...bannerBgByIndex.value, [i]: ph };
+        refreshBannerOwlHeight();
+      };
+      fbImg.src = fb;
+    };
+    img.src = raw;
+  }
+  bannerBgByIndex.value = next;
+}
+
+function eventImageFallback(index: number): string {
+  return eventFallbackImage(index, B);
+}
+
+function galleryImageFallback(index: number): string {
+  return galleryFallbackImage(index, B);
 }
 
 function jq(): typeof window.jQuery {
@@ -269,7 +322,7 @@ function initBannerOwl(): void {
     `${B}/images/shp1g.png`,
   ];
   preloadSlideImages(
-    [...slides.map((s) => s.imageUrl), ...capAssets],
+    [...slides.map((_, i) => slideBgUrl(i, slides[i])), ...capAssets],
     () => {
       refreshBannerOwlHeight();
       window.setTimeout(refreshBannerOwlHeight, 80);
@@ -278,6 +331,7 @@ function initBannerOwl(): void {
 }
 
 async function refreshBannerCarousel(): Promise<void> {
+  validateBannerImages();
   await nextTick();
   initBannerOwl();
 }
@@ -328,7 +382,7 @@ onBeforeUnmount(() => {
             v-for="(slide, i) in displaySlides"
             :key="i"
             class="featured-item"
-            :style="{ backgroundImage: `url(${slide.imageUrl})` }"
+            :style="{ backgroundImage: `url(${slideBgUrl(i, slide)})` }"
           >
             <div class="featured-cap">
               <img :src="`${B}/images/resources/${i === 0 ? 'bsml-txt' : 'bsml-txt2'}.png`" alt="" />
@@ -503,7 +557,7 @@ onBeforeUnmount(() => {
         <div v-else class="event-sec remove-ext5">
           <div class="row">
             <div
-              v-for="ev in homeEvents"
+              v-for="(ev, evIdx) in homeEvents"
               :key="ev.id"
               class="col-md-4 col-sm-6 col-lg-4"
             >
@@ -516,9 +570,9 @@ onBeforeUnmount(() => {
                     target="_blank"
                     rel="noopener noreferrer"
                     :title="ev.title"
-                  ><img :src="ev.imageUrl" :alt="ev.title" /></a>
+                  ><SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" /></a>
                   <RouterLink v-else :to="{ name: 'jadwal-kajian' }" :title="ev.title">
-                    <img :src="ev.imageUrl" :alt="ev.title" />
+                    <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" />
                   </RouterLink>
                   <EventCountdown v-if="ev.targetMs != null" :target-ms="ev.targetMs" />
                 </div>
@@ -571,15 +625,19 @@ onBeforeUnmount(() => {
         </div>
         <div v-else class="gallery-wrap">
           <div class="row mrg10">
-            <div v-for="item in homeGallery" :key="item.id" class="col-md-3 col-sm-6 col-lg-3">
+            <div v-for="(item, galIdx) in homeGallery" :key="item.id" class="col-md-3 col-sm-6 col-lg-3">
               <div class="gallery-item brd-rd5">
                 <a
-                  :href="item.imageUrl"
+                  :href="item.imageUrl || galleryImageFallback(galIdx)"
                   data-fancybox="gallery"
                   :data-caption="item.title"
                   :title="item.title"
                 >
-                  <img :src="item.imageUrl" :alt="item.title" />
+                  <SiteImg
+                    :src="item.imageUrl"
+                    :fallback="galleryImageFallback(galIdx)"
+                    :alt="item.title"
+                  />
                 </a>
               </div>
             </div>

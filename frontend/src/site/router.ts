@@ -22,6 +22,12 @@ const routes: RouteRecordRaw[] = [
       { path: "laporan-keuangan", name: "laporan-keuangan", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Laporan Keuangan" } },
 
       { path: "kontak", name: "kontak", component: () => import("./views/ContactView.vue"), meta: { title: "Kontak" } },
+      {
+        path: "penyewaan-aula",
+        name: "penyewaan-aula",
+        component: () => import("./views/PenyewaanAulaView.vue"),
+        meta: { title: "Penyewaan Aula" },
+      },
     ],
   },
 ];
