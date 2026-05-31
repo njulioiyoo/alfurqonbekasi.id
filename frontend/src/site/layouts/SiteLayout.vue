@@ -77,13 +77,15 @@ function hidePreloader(): void {
 }
 
 onMounted(async () => {
-  const loaded = await getPublicConfig();
-  cfg.value = loaded;
-  applySiteIntegrations(loaded);
-  configReady.value = true;
-
-  await nextTick();
-  hidePreloader();
+  try {
+    const loaded = await getPublicConfig();
+    cfg.value = loaded;
+    applySiteIntegrations(loaded);
+  } finally {
+    configReady.value = true;
+    await nextTick();
+    hidePreloader();
+  }
 });
 </script>
 
@@ -161,8 +163,8 @@ onMounted(async () => {
                 <a :href="email ? `mailto:${email}` : '#'" :title="displayEmail">{{ displayEmail }}</a>
               </li>
             </ul>
-            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'donasi' }" custom>
-              <a :href="href" class="theme-btn theme-bg brd-rd5" title="" @click="navigate">MAKE DONATION</a>
+            <RouterLink v-slot="{ href, navigate }" :to="{ name: 'kontak' }" custom>
+              <a :href="href" class="theme-btn theme-bg brd-rd5" title="Hubungi pengurus masjid" @click="navigate">HUBUNGI KAMI</a>
             </RouterLink>
           </div>
         </div>
