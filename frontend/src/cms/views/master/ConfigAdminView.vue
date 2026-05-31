@@ -287,7 +287,7 @@ async function saveFacilities(): Promise<boolean> {
   return true;
 }
 
-const BANNER_W = 1920;
+const BANNER_W = 2256;
 const BANNER_H = 990;
 const bannerAccept = "image/jpeg,image/png,image/webp";
 const bannerSizeHint = `Gambar wajib tepat ${BANNER_W}×${BANNER_H} px (JPEG, PNG, atau WebP).`;
@@ -1320,7 +1320,7 @@ onUnmounted(() => {
 .cms-banner-slide-card .cms-banner-preview {
   width: 100%;
   max-width: 480px;
-  aspect-ratio: 1920 / 990;
+  aspect-ratio: 2256 / 990;
   border: 1px solid #e2e5ec;
   border-radius: 4px;
   background: #f7f8fa;

@@ -33,7 +33,7 @@ const allowedDocMime = new Set([
 
 export const uploadImageMiddleware = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 6 * 1024 * 1024 }, // banner 1920×990 can exceed 3MB
+  limits: { fileSize: 6 * 1024 * 1024 }, // banner 2256×990 can exceed 3MB
 }).single("file");
 
 export const uploadFileMiddleware = multer({

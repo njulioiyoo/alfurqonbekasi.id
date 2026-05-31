@@ -1,6 +1,6 @@
 import { readImageDimensionsFromBuffer } from "./image-dimensions.js";
 
-export const BANNER_IMAGE_WIDTH = 1920;
+export const BANNER_IMAGE_WIDTH = 2256;
 export const BANNER_IMAGE_HEIGHT = 990;
 
 export const BANNER_IMAGE_SIZE_MESSAGE = `Gambar banner wajib berukuran tepat ${BANNER_IMAGE_WIDTH}×${BANNER_IMAGE_HEIGHT} piksel.`;

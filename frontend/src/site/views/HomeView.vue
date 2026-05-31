@@ -180,6 +180,15 @@ const displaySlides = computed(() => {
   return from.length > 0 ? from : fallbackSlides;
 });
 
+const usingCmsBanners = computed(() => {
+  const from = cfg.value?.homeBanners?.filter((s) => s.imageUrl?.trim()) ?? [];
+  return from.length > 0;
+});
+
+function slideHasCaption(slide: HomeBannerSlide): boolean {
+  return Boolean(slide.title?.trim() || slide.subtitle?.trim() || slide.linkUrl?.trim());
+}
+
 function internalPath(url: string): string {
   const t = url.trim();
   if (!t) return "/";
@@ -188,7 +197,8 @@ function internalPath(url: string): string {
 }
 
 function slideCtaLabel(slide: HomeBannerSlide): string {
-  return slide.linkLabel?.trim() || "Selengkapnya";
+  const label = slide.linkLabel?.trim();
+  return label || "Selengkapnya";
 }
 
 function defaultBannerFallback(index: number): string {
@@ -269,12 +279,23 @@ function destroyBannerOwl(): void {
 }
 
 function refreshBannerOwlHeight(): void {
+  syncBannerCarouselHeight();
+}
+
+function syncBannerCarouselHeight(): void {
   const $ = jq();
   const el = bannerCarouselEl.value;
   if (!$?.fn?.trigger || !el) return;
   const $el = $(el);
-  if (!($el as unknown as { data?: (k: string) => unknown }).data?.("owl.carousel")) return;
-  $el.trigger("refresh.owl.carousel");
+  const $slide = $el.find(".site-hero-slide").first();
+  if (!$slide.length) return;
+  const h = $slide.outerHeight();
+  if (h && h > 0) {
+    $el.find(".owl-stage-outer").css("height", `${h}px`);
+  }
+  if (($el as unknown as { data?: (k: string) => unknown }).data?.("owl.carousel")) {
+    $el.trigger("refresh.owl.carousel");
+  }
 }
 
 function preloadSlideImages(urls: string[], onDone: () => void): void {
@@ -307,13 +328,16 @@ function initBannerOwl(): void {
     loop: slides.length > 1,
     margin: 0,
     nav: true,
+    autoHeight: true,
     responsive: {
       0: { items: 1 },
       600: { items: 1 },
       1000: { items: 1 },
     },
   });
-  $el.on("initialized.owl.carousel.siteHero", () => refreshBannerOwlHeight());
+  $el.on("initialized.owl.carousel.siteHero refreshed.owl.carousel.siteHero", () => {
+    syncBannerCarouselHeight();
+  });
   const capAssets = [
     `${B}/images/resources/bsml-txt.png`,
     `${B}/images/resources/bsml-txt2.png`,
@@ -324,8 +348,9 @@ function initBannerOwl(): void {
   preloadSlideImages(
     [...slides.map((_, i) => slideBgUrl(i, slides[i])), ...capAssets],
     () => {
-      refreshBannerOwlHeight();
-      window.setTimeout(refreshBannerOwlHeight, 80);
+      syncBannerCarouselHeight();
+      window.setTimeout(syncBannerCarouselHeight, 80);
+      window.setTimeout(syncBannerCarouselHeight, 300);
     }
   );
 }
@@ -373,41 +398,69 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section>
+  <section class="site-hero-section">
     <div class="gap no-gap">
-      <img class="botm-shp shp-img" :src="`${B}/images/shp1g.png`" alt="" />
-      <div class="featured-area-wrap text-center">
+      <img v-if="!usingCmsBanners" class="botm-shp shp-img" :src="`${B}/images/shp1g.png`" alt="" />
+      <div class="featured-area-wrap site-hero-banners text-center">
         <div ref="bannerCarouselEl" class="featured-area owl-carousel">
           <div
             v-for="(slide, i) in displaySlides"
             :key="i"
-            class="featured-item"
+            class="featured-item site-hero-slide"
+            :class="{ 'site-hero-slide--caption': slideHasCaption(slide) || !usingCmsBanners }"
             :style="{ backgroundImage: `url(${slideBgUrl(i, slide)})` }"
           >
-            <div class="featured-cap">
-              <img :src="`${B}/images/resources/${i === 0 ? 'bsml-txt' : 'bsml-txt2'}.png`" alt="" />
-              <h1><img :src="`${B}/images/resources/ayat-txt.png`" alt="" /></h1>
-              <img class="before-imge" :src="`${B}/images/pshapeg.png`" alt="" />
-              <h3>{{ slide.title }}</h3>
-              <span v-if="slide.subtitle">{{ slide.subtitle }}</span>
-              <RouterLink
-                v-if="slide.linkUrl?.trim() && !isExternalUrl(slide.linkUrl)"
-                class="theme-btn theme-bg brd-rd5"
-                :to="internalPath(slide.linkUrl)"
-                :title="slideCtaLabel(slide)"
-              >
-                {{ slideCtaLabel(slide) }}
-              </RouterLink>
-              <a
-                v-else
-                class="theme-btn theme-bg brd-rd5"
-                :href="slide.linkUrl?.trim() || '#'"
-                :target="isExternalUrl(slide.linkUrl || '') ? '_blank' : undefined"
-                :rel="isExternalUrl(slide.linkUrl || '') ? 'noopener noreferrer' : undefined"
-                :title="slideCtaLabel(slide)"
-              >
-                {{ slideCtaLabel(slide) }}
-              </a>
+            <div
+              v-if="slideHasCaption(slide) || !usingCmsBanners"
+              class="featured-cap site-hero-cap"
+            >
+              <template v-if="!usingCmsBanners">
+                <img :src="`${B}/images/resources/${i === 0 ? 'bsml-txt' : 'bsml-txt2'}.png`" alt="" />
+                <h1><img :src="`${B}/images/resources/ayat-txt.png`" alt="" /></h1>
+                <img class="before-imge" :src="`${B}/images/pshapeg.png`" alt="" />
+                <h3 v-if="slide.title?.trim()">{{ slide.title.trim() }}</h3>
+                <span v-if="slide.subtitle?.trim()">{{ slide.subtitle.trim() }}</span>
+                <RouterLink
+                  v-if="slide.linkUrl?.trim() && !isExternalUrl(slide.linkUrl)"
+                  class="theme-btn theme-bg brd-rd5"
+                  :to="internalPath(slide.linkUrl)"
+                  :title="slideCtaLabel(slide)"
+                >
+                  {{ slideCtaLabel(slide) }}
+                </RouterLink>
+                <a
+                  v-else-if="slide.linkUrl?.trim()"
+                  class="theme-btn theme-bg brd-rd5"
+                  :href="slide.linkUrl.trim()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :title="slideCtaLabel(slide)"
+                >
+                  {{ slideCtaLabel(slide) }}
+                </a>
+              </template>
+              <template v-else>
+                <h3 v-if="slide.title?.trim()">{{ slide.title.trim() }}</h3>
+                <span v-if="slide.subtitle?.trim()">{{ slide.subtitle.trim() }}</span>
+                <RouterLink
+                  v-if="slide.linkUrl?.trim() && !isExternalUrl(slide.linkUrl)"
+                  class="theme-btn theme-bg brd-rd5"
+                  :to="internalPath(slide.linkUrl)"
+                  :title="slideCtaLabel(slide)"
+                >
+                  {{ slideCtaLabel(slide) }}
+                </RouterLink>
+                <a
+                  v-else-if="slide.linkUrl?.trim()"
+                  class="theme-btn theme-bg brd-rd5"
+                  :href="slide.linkUrl.trim()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :title="slideCtaLabel(slide)"
+                >
+                  {{ slideCtaLabel(slide) }}
+                </a>
+              </template>
             </div>
           </div>
         </div>
@@ -681,6 +734,59 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.site-hero-section {
+  overflow: visible;
+}
+
+.site-hero-section > .gap.no-gap {
+  overflow: visible;
+}
+
+.site-hero-banners :deep(.featured-area),
+.site-hero-banners :deep(.owl-stage-outer),
+.site-hero-banners :deep(.owl-stage),
+.site-hero-banners :deep(.owl-item) {
+  height: auto !important;
+}
+
+.site-hero-banners :deep(.owl-item) {
+  float: none;
+}
+
+.site-hero-banners :deep(.featured-item.site-hero-slide) {
+  float: none;
+  width: 100%;
+  aspect-ratio: 2256 / 990;
+  min-height: 200px;
+  padding: 0 !important;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.site-hero-banners :deep(.site-hero-slide--caption:before) {
+  opacity: 0.45;
+}
+
+.site-hero-banners :deep(.site-hero-slide:not(.site-hero-slide--caption):before) {
+  opacity: 0;
+}
+
+.site-hero-banners :deep(.site-hero-cap) {
+  max-width: min(720px, 88%);
+  padding: 24px 16px 32px;
+}
+
+.site-hero-banners :deep(.site-hero-cap > h3:empty),
+.site-hero-banners :deep(.site-hero-cap > span:empty) {
+  display: none;
+  margin: 0;
+}
+
 .site-home-status {
   padding: 24px 16px;
   color: #666;
