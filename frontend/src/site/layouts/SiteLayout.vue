@@ -290,10 +290,11 @@ onMounted(async () => {
                     <h5>Tautan Cepat</h5>
                     <ul class="cnt-inf">
                       <li><RouterLink :to="{ name: 'home' }">Beranda</RouterLink></li>
+                      <li><RouterLink :to="{ name: 'tentang-masjid' }">Tentang Masjid</RouterLink></li>
                       <li><RouterLink :to="{ name: 'jadwal-kajian' }">Jadwal Kajian</RouterLink></li>
-                      <li><RouterLink :to="{ name: 'donasi' }">Donasi / Ziswaf</RouterLink></li>
-                      <li><RouterLink :to="{ name: 'laporan-keuangan' }">Laporan Keuangan</RouterLink></li>
+                      <li><RouterLink :to="{ name: 'penyewaan-aula' }">Penyewaan Aula</RouterLink></li>
                       <li><RouterLink :to="{ name: 'kontak' }">Kontak</RouterLink></li>
+                      <li><RouterLink :to="{ name: 'kebijakan-privasi' }">Kebijakan Privasi</RouterLink></li>
                     </ul>
                   </div>
                 </div>
@@ -325,7 +326,12 @@ onMounted(async () => {
               </div>
             </div>
             <div class="cpy-rgt text-center">
-              <p>&copy; {{ year }} <RouterLink :to="{ name: 'home' }">{{ footerText }}</RouterLink> / HAK CIPTA DILINDUNGI</p>
+              <p>
+                &copy; {{ year }}
+                <RouterLink :to="{ name: 'home' }">{{ footerText }}</RouterLink>
+                / HAK CIPTA DILINDUNGI —
+                <RouterLink :to="{ name: 'kebijakan-privasi' }">Kebijakan Privasi</RouterLink>
+              </p>
             </div>
           </div>
         </div>

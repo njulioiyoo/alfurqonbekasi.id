@@ -7,20 +7,30 @@ const routes: RouteRecordRaw[] = [
     component: SiteLayout,
     children: [
       { path: "", name: "home", component: () => import("./views/HomeView.vue"), meta: { title: "Beranda" } },
-
-      { path: "jadwal-kajian", name: "jadwal-kajian", component: () => import("./views/JadwalKajianView.vue"), meta: { title: "Jadwal Kajian" } },
-      { path: "jadwal-petugas", name: "jadwal-petugas", component: () => import("./views/JadwalPetugasView.vue"), meta: { title: "Jadwal Petugas Ibadah" } },
-      { path: "pendaftaran-event", name: "pendaftaran-event", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Pendaftaran Event" } },
-
-      { path: "layanan-jenazah", name: "layanan-jenazah", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Layanan Jenazah" } },
-      { path: "program-sosial", name: "program-sosial", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Program Sosial" } },
-      { path: "tpq", name: "tpq", component: () => import("./views/ComingSoonView.vue"), meta: { title: "TPQ / Madrasah" } },
-
-      { path: "kas-masjid", name: "kas-masjid", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Kas Masjid" } },
-      { path: "donasi", name: "donasi", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Donasi / Ziswaf" } },
-      { path: "qurban-zakat", name: "qurban-zakat", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Qurban & Zakat Musiman" } },
-      { path: "laporan-keuangan", name: "laporan-keuangan", component: () => import("./views/ComingSoonView.vue"), meta: { title: "Laporan Keuangan" } },
-
+      {
+        path: "tentang-masjid",
+        name: "tentang-masjid",
+        component: () => import("./views/TentangMasjidView.vue"),
+        meta: { title: "Tentang Masjid" },
+      },
+      {
+        path: "kebijakan-privasi",
+        name: "kebijakan-privasi",
+        component: () => import("./views/KebijakanPrivasiView.vue"),
+        meta: { title: "Kebijakan Privasi" },
+      },
+      {
+        path: "jadwal-kajian",
+        name: "jadwal-kajian",
+        component: () => import("./views/JadwalKajianView.vue"),
+        meta: { title: "Jadwal Kajian" },
+      },
+      {
+        path: "jadwal-petugas",
+        name: "jadwal-petugas",
+        component: () => import("./views/JadwalPetugasView.vue"),
+        meta: { title: "Jadwal Petugas Ibadah" },
+      },
       { path: "kontak", name: "kontak", component: () => import("./views/ContactView.vue"), meta: { title: "Kontak" } },
       {
         path: "penyewaan-aula",
@@ -28,6 +38,15 @@ const routes: RouteRecordRaw[] = [
         component: () => import("./views/PenyewaanAulaView.vue"),
         meta: { title: "Penyewaan Aula" },
       },
+      // URL lama (Coming Soon) → arahkan ke halaman bermakna agar tidak thin content
+      { path: "pendaftaran-event", redirect: { name: "jadwal-kajian" } },
+      { path: "layanan-jenazah", redirect: { name: "tentang-masjid" } },
+      { path: "program-sosial", redirect: { name: "tentang-masjid" } },
+      { path: "tpq", redirect: { name: "tentang-masjid" } },
+      { path: "kas-masjid", redirect: { name: "tentang-masjid" } },
+      { path: "donasi", redirect: { name: "kontak" } },
+      { path: "qurban-zakat", redirect: { name: "kontak" } },
+      { path: "laporan-keuangan", redirect: { name: "tentang-masjid" } },
     ],
   },
 ];
