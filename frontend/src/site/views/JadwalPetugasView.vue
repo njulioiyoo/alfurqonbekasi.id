@@ -9,6 +9,7 @@ import {
   staffRoleLabel,
   staffWhatsappHref,
 } from "../utils/prayer-staff-display.js";
+import { plainTextFromHtml } from "../utils/html-text.js";
 import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 
 const B = "/bismillah/assets";
@@ -164,12 +165,11 @@ onMounted(() => {
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat jadwal petugas…</p>
         </div>
 
-        <div v-else-if="loadError">
-          <SiteNotFoundPanel
-            kind="error"
-            :description="`${loadError}. Silakan coba lagi atau`"
-            :show-search="false"
-          />
+        <div v-else-if="loadError" class="site-staff-status text-center site-staff-status--warn">
+          <p><i class="fas fa-exclamation-circle theme-clr"></i> {{ loadError }}</p>
+          <button type="button" class="theme-btn theme-bg brd-rd5" @click="loadPage(currentPage || 1)">
+            Coba lagi
+          </button>
         </div>
 
         <div v-else-if="showEmpty">
@@ -290,6 +290,7 @@ onMounted(() => {
 
 .site-staff-status--warn p {
   color: #856404;
+  margin-bottom: 16px;
 }
 
 .site-staff-empty-icon {

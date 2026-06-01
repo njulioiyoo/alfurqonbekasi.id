@@ -242,12 +242,9 @@ onMounted(async () => {
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat daftar aula…</p>
         </div>
 
-        <div v-else-if="hallsLoadError">
-          <SiteNotFoundPanel
-            kind="error"
-            :description="`${hallsLoadError}. Silakan coba lagi atau`"
-            :show-search="false"
-          />
+        <div v-else-if="hallsLoadError" class="text-center site-hall-status site-hall-status--warn">
+          <p><i class="fas fa-exclamation-circle theme-clr"></i> {{ hallsLoadError }}</p>
+          <button type="button" class="theme-btn theme-bg brd-rd5" @click="loadHalls">Coba lagi</button>
         </div>
 
         <div v-else-if="!halls.length">
@@ -539,5 +536,10 @@ onMounted(async () => {
   padding: 24px;
   margin-bottom: 48px;
   color: #666;
+}
+
+.site-hall-status--warn p {
+  color: #856404;
+  margin-bottom: 16px;
 }
 </style>

@@ -161,12 +161,11 @@ onMounted(() => {
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat jadwal kajian…</p>
         </div>
 
-        <div v-else-if="loadError">
-          <SiteNotFoundPanel
-            kind="error"
-            :description="`${loadError}. Silakan coba lagi atau`"
-            :show-search="false"
-          />
+        <div v-else-if="loadError" class="site-events-status text-center site-events-status--warn">
+          <p><i class="fas fa-exclamation-circle theme-clr"></i> {{ loadError }}</p>
+          <button type="button" class="theme-btn theme-bg brd-rd5" @click="loadPage(currentPage || 1)">
+            Coba lagi
+          </button>
         </div>
 
         <div v-else-if="showEmpty">
@@ -306,6 +305,7 @@ onMounted(() => {
 
 .site-events-status--warn p {
   color: #856404;
+  margin-bottom: 16px;
 }
 
 .site-events-empty-icon {
