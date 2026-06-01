@@ -10,6 +10,7 @@ import {
   type SiteConfig,
 } from "../api.js";
 import SiteImg from "../components/SiteImg.vue";
+import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 import {
   getRecaptchaResponse,
   renderRecaptchaWidget,
@@ -30,6 +31,7 @@ const EVENT_TYPES = [
 const cfg = ref<SiteConfig | null>(null);
 const halls = ref<PublicHall[]>([]);
 const hallsLoading = ref(true);
+const hallsLoadError = ref("");
 const approvedRanges = ref<{ eventDateStart: string; eventDateEnd: string }[]>([]);
 
 const form = ref({
@@ -69,13 +71,20 @@ function hallCoverUrl(hall: PublicHall, index: number): string {
 
 async function loadHalls(): Promise<void> {
   hallsLoading.value = true;
+  hallsLoadError.value = "";
   try {
     const json = await getPublicHalls();
-    halls.value = json.ok && json.data?.items?.length ? json.data.items : [];
+    if (!json.ok) {
+      hallsLoadError.value = json.error?.message || "Gagal memuat daftar aula";
+      halls.value = [];
+      return;
+    }
+    halls.value = json.data?.items?.length ? json.data.items : [];
     if (halls.value.length && !form.value.hallId) {
       form.value.hallId = halls.value[0].id;
     }
   } catch {
+    hallsLoadError.value = "Tidak dapat menghubungi server";
     halls.value = [];
   } finally {
     hallsLoading.value = false;
@@ -232,7 +241,25 @@ onMounted(async () => {
         <div v-if="hallsLoading" class="text-center site-hall-status">
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat daftar aula…</p>
         </div>
-        <div v-else-if="halls.length" class="row mrg10 site-hall-cards">
+
+        <div v-else-if="hallsLoadError">
+          <SiteNotFoundPanel
+            kind="error"
+            :description="`${hallsLoadError}. Silakan coba lagi atau`"
+            :show-search="false"
+          />
+        </div>
+
+        <div v-else-if="!halls.length">
+          <SiteNotFoundPanel
+            kind="data"
+            description="Belum ada aula yang dipublikasikan untuk disewa. Silakan hubungi pengurus atau"
+            :show-search="false"
+          />
+        </div>
+
+        <template v-else>
+        <div class="row mrg10 site-hall-cards">
           <div v-for="(hall, idx) in halls" :key="hall.id" class="col-md-6 col-lg-6 site-hall-cards__col">
             <div
               class="event-bx2 brd-rd5 site-hall-card"
@@ -363,6 +390,7 @@ onMounted(async () => {
             <li>Biaya sewa (jika ada) akan dikonfirmasi oleh pengurus saat persetujuan.</li>
           </ul>
         </div>
+        </template>
       </div>
     </div>
   </section>

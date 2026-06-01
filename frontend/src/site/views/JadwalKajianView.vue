@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import EventCountdown from "../components/EventCountdown.vue";
+import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 import { getPublicEvents, type PublicContentItem } from "../api.js";
 import {
   eventFallbackImage,
@@ -160,14 +161,20 @@ onMounted(() => {
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat jadwal kajian…</p>
         </div>
 
-        <div v-else-if="loadError" class="site-events-status text-center site-events-status--warn">
-          <p><i class="fas fa-exclamation-circle theme-clr"></i> {{ loadError }}</p>
+        <div v-else-if="loadError">
+          <SiteNotFoundPanel
+            kind="error"
+            :description="`${loadError}. Silakan coba lagi atau`"
+            :show-search="false"
+          />
         </div>
 
-        <div v-else-if="showEmpty" class="site-events-status text-center">
-          <i class="far fa-calendar-times site-events-empty-icon theme-clr"></i>
-          <h4>Data belum tersedia</h4>
-          <p>Jadwal kajian belum dipublikasikan. Silakan kembali lagi nanti.</p>
+        <div v-else-if="showEmpty">
+          <SiteNotFoundPanel
+            kind="data"
+            description="Jadwal kajian belum dipublikasikan. Silakan kembali lagi nanti atau"
+            :show-search="false"
+          />
         </div>
 
         <template v-else>

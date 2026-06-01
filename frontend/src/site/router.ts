@@ -38,15 +38,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("./views/PenyewaanAulaView.vue"),
         meta: { title: "Penyewaan Aula" },
       },
-      // URL lama (Coming Soon) → arahkan ke halaman bermakna agar tidak thin content
-      { path: "pendaftaran-event", name: "pendaftaran-event", redirect: { name: "jadwal-kajian" } },
-      { path: "layanan-jenazah", name: "layanan-jenazah", redirect: { name: "tentang-masjid" } },
-      { path: "program-sosial", name: "program-sosial", redirect: { name: "tentang-masjid" } },
-      { path: "tpq", name: "tpq", redirect: { name: "tentang-masjid" } },
-      { path: "kas-masjid", name: "kas-masjid", redirect: { name: "tentang-masjid" } },
-      { path: "donasi", name: "donasi", redirect: { name: "kontak" } },
-      { path: "qurban-zakat", name: "qurban-zakat", redirect: { name: "kontak" } },
-      { path: "laporan-keuangan", name: "laporan-keuangan", redirect: { name: "tentang-masjid" } },
+      {
+        path: ":pathMatch(.*)*",
+        name: "not-found",
+        component: () => import("./views/NotFoundView.vue"),
+        meta: { title: "Halaman Tidak Ditemukan" },
+      },
     ],
   },
 ];

@@ -9,7 +9,7 @@ import {
   staffRoleLabel,
   staffWhatsappHref,
 } from "../utils/prayer-staff-display.js";
-import { plainTextFromHtml } from "../utils/html-text.js";
+import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
@@ -164,14 +164,20 @@ onMounted(() => {
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat jadwal petugas…</p>
         </div>
 
-        <div v-else-if="loadError" class="site-staff-status text-center site-staff-status--warn">
-          <p><i class="fas fa-exclamation-circle theme-clr"></i> {{ loadError }}</p>
+        <div v-else-if="loadError">
+          <SiteNotFoundPanel
+            kind="error"
+            :description="`${loadError}. Silakan coba lagi atau`"
+            :show-search="false"
+          />
         </div>
 
-        <div v-else-if="showEmpty" class="site-staff-status text-center">
-          <i class="far fa-calendar-times site-staff-empty-icon theme-clr"></i>
-          <h4>Data belum tersedia</h4>
-          <p>Jadwal petugas ibadah belum dipublikasikan. Silakan kembali lagi nanti.</p>
+        <div v-else-if="showEmpty">
+          <SiteNotFoundPanel
+            kind="data"
+            description="Jadwal petugas ibadah belum dipublikasikan. Silakan kembali lagi nanti atau"
+            :show-search="false"
+          />
         </div>
 
         <template v-else>

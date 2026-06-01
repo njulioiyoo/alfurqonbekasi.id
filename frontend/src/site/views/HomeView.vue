@@ -11,6 +11,7 @@ import {
 } from "../api.js";
 import EventCountdown from "../components/EventCountdown.vue";
 import SiteImg from "../components/SiteImg.vue";
+import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 import { plainTextFromHtml } from "../utils/html-text.js";
 import {
   eventFallbackImage,
@@ -394,7 +395,7 @@ onBeforeUnmount(() => {
 <template>
   <section class="site-hero-section">
     <div class="gap no-gap">
-      <img v-if="!usingCmsBanners" class="botm-shp shp-img" :src="`${B}/images/shp1g.png`" alt="" />
+      <img class="botm-shp shp-img" :src="`${B}/images/shp1g.png`" alt="shp1.png" />
       <div class="featured-area-wrap site-hero-banners text-center">
         <div ref="bannerCarouselEl" class="featured-area owl-carousel">
           <div
@@ -530,8 +531,13 @@ onBeforeUnmount(() => {
         <div v-if="homeEventsLoading" class="site-home-status text-center">
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat kegiatan…</p>
         </div>
-        <div v-else-if="homeEvents.length === 0" class="site-home-status text-center">
-          <p>Belum ada kegiatan dipublikasikan. Lihat <RouterLink :to="{ name: 'jadwal-kajian' }">jadwal kajian</RouterLink>.</p>
+        <div v-else-if="homeEvents.length === 0">
+          <SiteNotFoundPanel
+            kind="data"
+            compact
+            description="Belum ada kegiatan dipublikasikan. Lihat jadwal kajian atau"
+            :show-search="false"
+          />
         </div>
         <div v-else class="event-sec remove-ext5">
           <div class="row">
@@ -599,8 +605,13 @@ onBeforeUnmount(() => {
         <div v-if="homeGalleryLoading" class="site-home-status text-center">
           <p><i class="fas fa-spinner fa-spin theme-clr"></i> Memuat galeri…</p>
         </div>
-        <div v-else-if="homeGallery.length === 0" class="site-home-status text-center">
-          <p>Belum ada foto galeri dipublikasikan.</p>
+        <div v-else-if="homeGallery.length === 0">
+          <SiteNotFoundPanel
+            kind="data"
+            compact
+            description="Belum ada foto galeri dipublikasikan. Silakan"
+            :show-search="false"
+          />
         </div>
         <div v-else class="gallery-wrap">
           <div class="row mrg10">
@@ -634,6 +645,10 @@ onBeforeUnmount(() => {
 
 .site-hero-section > .gap.no-gap {
   overflow: visible;
+}
+
+.site-hero-section > .gap.no-gap > .botm-shp.shp-img {
+  bottom: 0;
 }
 
 .site-hero-banners :deep(.featured-area),
