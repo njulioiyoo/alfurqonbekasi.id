@@ -13,6 +13,7 @@ import {
 import KtRemoteDatatable from "../../components/KtRemoteDatatable.vue";
 import { useAccessStore } from "../../stores/access.js";
 import { alertErrorDialog, confirmDeleteDialog } from "../../utils/sweetalert.js";
+import { resolveCmsAssetUrl } from "../../utils/upload-url.js";
 
 type ContentType = "event" | "prayer_staff" | "program" | "gallery";
 
@@ -383,6 +384,20 @@ const SUMMERNOTE_TOOLBAR: unknown[] = [
   ["view", ["codeview"]],
 ];
 
+async function uploadSummernoteImage(file: File, $el: JQueryLite): Promise<void> {
+  try {
+    const json = await uploadAdminImage(file);
+    if (!json.ok || !json.data?.url) {
+      toastError(json.error?.message || "Upload gambar gagal");
+      return;
+    }
+    const src = resolveCmsAssetUrl(json.data.url);
+    $el.summernote?.("insertImage", src);
+  } catch {
+    toastError("Tidak dapat menghubungi server");
+  }
+}
+
 function initSummernoteOn(
   el: HTMLDivElement | null,
   opts: { initialHtml: string; placeholder: string; height: number; onChange: (html: string) => void }
@@ -405,6 +420,14 @@ function initSummernoteOn(
     toolbar: SUMMERNOTE_TOOLBAR,
     callbacks: {
       onChange: (contents: string) => opts.onChange(contents),
+      onImageUpload: (files: File[]) => {
+        const list = Array.from(files ?? []);
+        void (async () => {
+          for (const file of list) {
+            await uploadSummernoteImage(file, $el);
+          }
+        })();
+      },
     },
   });
   $el.summernote?.("code", opts.initialHtml || "");
@@ -552,7 +575,7 @@ const modalTitle = computed(() => {
 const hasCoverImage = computed(() => Boolean(form.value.coverImageUrl?.trim()));
 const coverPreviewUrl = computed(() =>
   hasCoverImage.value
-    ? form.value.coverImageUrl.trim()
+    ? resolveCmsAssetUrl(form.value.coverImageUrl)
     : "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='320'%3E%3Crect width='100%25' height='100%25' fill='%23f1f3f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23979fb8' font-family='Arial' font-size='14'%3EBelum ada gambar%3C/text%3E%3C/svg%3E"
 );
 /** Harus selaras dengan `minEx` di backend `admin-content.controller.ts` (jadwal/galeri = 20). */

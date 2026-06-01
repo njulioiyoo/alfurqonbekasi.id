@@ -12,6 +12,7 @@ import { canManageContentType } from "../utils/content-acl.js";
 import { validateEventCoverUrl } from "../utils/event-cover-image.js";
 import { validateGalleryCoverUrl } from "../utils/gallery-image.js";
 import { validatePrayerStaffCoverUrl } from "../utils/prayer-staff-cover-image.js";
+import { optionalStoredMediaUrlSchema } from "../utils/media-url-schema.js";
 import { parseMetronicDatatableBody, queryGeneralSearch } from "../utils/metronic-datatable.js";
 
 const contentTypeSchema = z.enum([
@@ -53,7 +54,7 @@ const contentCreateSchema = z
     slug: slugSchema,
     excerpt: z.string().trim().max(4000),
     body: z.string().trim().max(100000),
-    coverImageUrl: z.union([z.string().trim().url(), z.literal(""), z.null()]).optional(),
+    coverImageUrl: optionalStoredMediaUrlSchema,
     status: contentStatusSchema.default("draft"),
     publishedAt: z.union([z.string().datetime(), z.literal(""), z.null()]).optional(),
     sortOrder: z.coerce.number().int().min(-99999).max(99999).default(0),
@@ -92,7 +93,7 @@ const contentPatchSchema = z
     slug: slugSchema.optional(),
     excerpt: z.string().trim().max(4000).optional(),
     body: z.string().trim().max(100000).optional(),
-    coverImageUrl: z.union([z.string().trim().url(), z.literal(""), z.null()]).optional(),
+    coverImageUrl: optionalStoredMediaUrlSchema,
     status: contentStatusSchema.optional(),
     publishedAt: z.union([z.string().datetime(), z.literal(""), z.null()]).optional(),
     sortOrder: z.coerce.number().int().min(-99999).max(99999).optional(),
