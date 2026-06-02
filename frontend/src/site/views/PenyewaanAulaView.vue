@@ -116,6 +116,13 @@ async function setupRecaptcha(): Promise<void> {
   }
 }
 
+function parseExpectedAttendees(raw: unknown): number | undefined {
+  const s = String(raw ?? "").trim();
+  if (!s) return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : undefined;
+}
+
 function validateForm(): boolean {
   const errors: Record<string, string> = {};
   const name = form.value.applicantName.trim();
@@ -156,7 +163,6 @@ async function onSubmit(): Promise<void> {
 
   submitting.value = true;
   try {
-    const attendees = form.value.expectedAttendees.trim();
     const json = await submitHallBooking({
       hallId: form.value.hallId,
       applicantName: form.value.applicantName.trim(),
@@ -169,7 +175,7 @@ async function onSubmit(): Promise<void> {
       eventDateEnd: form.value.eventDateEnd.trim() || undefined,
       timeStart: form.value.timeStart.trim() || undefined,
       timeEnd: form.value.timeEnd.trim() || undefined,
-      expectedAttendees: attendees ? Number(attendees) : undefined,
+      expectedAttendees: parseExpectedAttendees(form.value.expectedAttendees),
       notes: form.value.notes.trim() || undefined,
       recaptchaToken,
     });
@@ -203,8 +209,12 @@ async function onSubmit(): Promise<void> {
         /* ignore */
       }
     }
-  } catch {
-    formError.value = "Tidak dapat menghubungi server. Coba matikan pemblokir iklan untuk situs ini.";
+  } catch (e) {
+    console.error("submitHallBooking failed:", e);
+    formError.value =
+      e instanceof Error && e.message
+        ? e.message
+        : "Gagal mengirim pengajuan. Periksa koneksi internet lalu coba lagi.";
   } finally {
     submitting.value = false;
   }
@@ -366,7 +376,14 @@ onMounted(async () => {
               </div>
               <div class="col-md-6">
                 <label class="site-form-label">Perkiraan jumlah tamu</label>
-                <input v-model="form.expectedAttendees" type="number" min="1" class="brd-rd5" placeholder="Contoh: 200" />
+                <input
+                  v-model="form.expectedAttendees"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  class="brd-rd5"
+                  placeholder="Contoh: 200"
+                />
               </div>
               <div class="col-md-12">
                 <label class="site-form-label">Catatan tambahan</label>
