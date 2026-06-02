@@ -129,22 +129,6 @@ export async function postPublicHallBooking(req: Request, res: Response): Promis
   const email = data.applicantEmail?.trim() || "";
 
   try {
-    const mail = await sendHallBookingNotificationEmail({
-      hallName: hall.name,
-      applicantName: data.applicantName,
-      applicantPhone: data.applicantPhone,
-      applicantEmail: email,
-      organization: data.organization?.trim() || "",
-      eventType: data.eventType,
-      eventTitle: data.eventTitle,
-      eventDateStart: data.eventDateStart,
-      eventDateEnd,
-      timeStart: data.timeStart?.trim() || "",
-      timeEnd: data.timeEnd?.trim() || "",
-      expectedAttendees: data.expectedAttendees ?? null,
-      notes: data.notes?.trim() || "",
-    });
-
     const row = await createHallBooking({
       hallId: data.hallId,
       applicantName: data.applicantName,
@@ -159,13 +143,35 @@ export async function postPublicHallBooking(req: Request, res: Response): Promis
       timeEnd: data.timeEnd?.trim() || null,
       expectedAttendees: data.expectedAttendees ?? null,
       notes: data.notes?.trim() || null,
-      emailSent: mail.sent,
-      emailError: mail.error ?? null,
+      emailSent: false,
+      emailError: null,
     });
+
+    let emailSent = false;
+    try {
+      const mail = await sendHallBookingNotificationEmail({
+        hallName: hall.name,
+        applicantName: data.applicantName,
+        applicantPhone: data.applicantPhone,
+        applicantEmail: email,
+        organization: data.organization?.trim() || "",
+        eventType: data.eventType,
+        eventTitle: data.eventTitle,
+        eventDateStart: data.eventDateStart,
+        eventDateEnd,
+        timeStart: data.timeStart?.trim() || "",
+        timeEnd: data.timeEnd?.trim() || "",
+        expectedAttendees: data.expectedAttendees ?? null,
+        notes: data.notes?.trim() || "",
+      });
+      emailSent = mail.sent;
+    } catch (mailErr) {
+      console.error("hall booking notification email:", mailErr);
+    }
 
     res.status(201).json({
       ok: true,
-      data: { id: row.id, emailSent: mail.sent },
+      data: { id: row.id, emailSent },
     });
   } catch (e) {
     console.error(e);

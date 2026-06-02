@@ -175,7 +175,13 @@ async function onSubmit(): Promise<void> {
     });
     if (!json.ok) {
       formError.value = json.error?.message || "Gagal mengirim pengajuan.";
-      if (recaptchaWidgetId !== null) resetRecaptchaWidget(recaptchaWidgetId);
+      if (recaptchaWidgetId !== null) {
+        try {
+          resetRecaptchaWidget(recaptchaWidgetId);
+        } catch {
+          /* ignore */
+        }
+      }
       return;
     }
     formSent.value = true;
@@ -190,9 +196,15 @@ async function onSubmit(): Promise<void> {
     form.value.timeEnd = "";
     form.value.expectedAttendees = "";
     form.value.notes = "";
-    if (recaptchaWidgetId !== null) resetRecaptchaWidget(recaptchaWidgetId);
+    if (recaptchaWidgetId !== null) {
+      try {
+        resetRecaptchaWidget(recaptchaWidgetId);
+      } catch {
+        /* ignore */
+      }
+    }
   } catch {
-    formError.value = "Tidak dapat menghubungi server.";
+    formError.value = "Tidak dapat menghubungi server. Coba matikan pemblokir iklan untuk situs ini.";
   } finally {
     submitting.value = false;
   }

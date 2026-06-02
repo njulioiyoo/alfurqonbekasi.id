@@ -64,6 +64,13 @@ export function createApp(): express.Application {
   api.post("/public/hall-bookings", (req, res, next) => {
     void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
   });
+  /** Alias tanpa kata "booking" — beberapa ad blocker memblokir URL `/hall-bookings`. */
+  api.get("/public/sewa-aula/availability", (req, res, next) => {
+    void publicHallRentalController.getPublicHallAvailability(req, res).catch(next);
+  });
+  api.post("/public/sewa-aula", (req, res, next) => {
+    void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
+  });
   api.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);
   });
@@ -94,6 +101,12 @@ export function createApp(): express.Application {
     void publicHallRentalController.getPublicHallAvailability(req, res).catch(next);
   });
   app.post("/public/hall-bookings", (req, res, next) => {
+    void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
+  });
+  app.get("/public/sewa-aula/availability", (req, res, next) => {
+    void publicHallRentalController.getPublicHallAvailability(req, res).catch(next);
+  });
+  app.post("/public/sewa-aula", (req, res, next) => {
     void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
   });
   app.get("/public/content/:type", (req, res, next) => {

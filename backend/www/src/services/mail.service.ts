@@ -80,6 +80,9 @@ export async function sendContactNotificationEmail(
     port: cfg.smtpPort,
     secure: cfg.smtpPort === 465,
     auth: { user: cfg.smtpUser, pass: cfg.smtpPass },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
 
   const branding = {
@@ -134,6 +137,9 @@ export async function sendHallBookingNotificationEmail(
     port: cfg.smtpPort,
     secure: cfg.smtpPort === 465,
     auth: { user: cfg.smtpUser, pass: cfg.smtpPass },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
 
   const lines = [

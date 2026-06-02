@@ -40,7 +40,10 @@ export const hallBookingCreateSchema = z
       .optional(),
     timeStart: z.union([z.literal(""), z.string().regex(timeRegex)]).optional(),
     timeEnd: z.union([z.literal(""), z.string().regex(timeRegex)]).optional(),
-    expectedAttendees: z.coerce.number().int().min(1).max(50000).optional(),
+    expectedAttendees: z.preprocess(
+      (v) => (v === "" || v === null || v === undefined ? undefined : v),
+      z.coerce.number().int().min(1).max(50000).optional()
+    ),
     notes: z.string().trim().max(3000).optional(),
     recaptchaToken: z.string().trim().optional(),
   })

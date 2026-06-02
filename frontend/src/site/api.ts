@@ -289,6 +289,13 @@ export type SubmitHallBookingBody = {
   recaptchaToken?: string;
 };
 
+function fetchFailureMessage(err: unknown): string {
+  if (err instanceof TypeError) {
+    return "Permintaan diblokir browser atau ekstensi (mis. pemblokir iklan). Matikan untuk alfurqonbekasi.id lalu coba lagi.";
+  }
+  return "Tidak dapat menghubungi server";
+}
+
 async function parseApiJson<T extends { ok: boolean; error?: { message?: string } }>(
   res: Response,
   fallbackMessage: string
@@ -315,8 +322,8 @@ export async function getPublicHalls(): Promise<{
   try {
     const res = await fetch(`${BASE}/halls`);
     return await parseApiJson(res, "Gagal memuat daftar aula");
-  } catch {
-    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  } catch (e) {
+    return { ok: false, error: { message: fetchFailureMessage(e) } };
   }
 }
 
@@ -326,10 +333,12 @@ export async function getPublicHallAvailability(hallId: string): Promise<{
   error?: { message: string };
 }> {
   try {
-    const res = await fetch(`${BASE}/hall-bookings/availability?hallId=${encodeURIComponent(hallId)}`);
+    const res = await fetch(
+      `${BASE}/sewa-aula/availability?hallId=${encodeURIComponent(hallId)}`
+    );
     return await parseApiJson(res, "Gagal memuat ketersediaan tanggal aula");
-  } catch {
-    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  } catch (e) {
+    return { ok: false, error: { message: fetchFailureMessage(e) } };
   }
 }
 
@@ -337,14 +346,14 @@ export async function submitHallBooking(
   body: SubmitHallBookingBody
 ): Promise<{ ok: boolean; data?: { id: string; emailSent: boolean }; error?: { message: string } }> {
   try {
-    const res = await fetch(`${BASE}/hall-bookings`, {
+    const res = await fetch(`${BASE}/sewa-aula`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     return await parseApiJson(res, "Gagal mengirim pengajuan penyewaan aula");
-  } catch {
-    return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
+  } catch (e) {
+    return { ok: false, error: { message: fetchFailureMessage(e) } };
   }
 }
 
