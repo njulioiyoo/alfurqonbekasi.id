@@ -12,6 +12,8 @@ import {
 } from "../utils/hall-booking-validation.js";
 import { verifyRecaptchaToken } from "../utils/recaptcha.js";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 async function configMap(): Promise<Record<string, string>> {
   const rows = await listConfigEntries();
   const map: Record<string, string> = {};
@@ -48,6 +50,10 @@ export async function getPublicHallAvailability(req: Request, res: Response): Pr
   const hallId = typeof req.query.hallId === "string" ? req.query.hallId.trim() : "";
   if (!hallId) {
     res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: "hallId wajib" } });
+    return;
+  }
+  if (!UUID_RE.test(hallId)) {
+    res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: "hallId tidak valid" } });
     return;
   }
   try {

@@ -289,6 +289,24 @@ export type SubmitHallBookingBody = {
   recaptchaToken?: string;
 };
 
+async function parseApiJson<T extends { ok: boolean; error?: { message?: string } }>(
+  res: Response,
+  fallbackMessage: string
+): Promise<T> {
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+  if (!contentType.includes("application/json")) {
+    return {
+      ok: false,
+      error: { message: `Server mengembalikan respons tidak valid (HTTP ${res.status}).` },
+    } as T;
+  }
+  const json = (await res.json()) as T;
+  if (!res.ok && !json.error?.message) {
+    return { ok: false, error: { message: fallbackMessage } } as T;
+  }
+  return json;
+}
+
 export async function getPublicHalls(): Promise<{
   ok: boolean;
   data?: { items: PublicHall[] };
@@ -296,7 +314,7 @@ export async function getPublicHalls(): Promise<{
 }> {
   try {
     const res = await fetch(`${BASE}/halls`);
-    return await res.json();
+    return await parseApiJson(res, "Gagal memuat daftar aula");
   } catch {
     return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
   }
@@ -309,7 +327,7 @@ export async function getPublicHallAvailability(hallId: string): Promise<{
 }> {
   try {
     const res = await fetch(`${BASE}/hall-bookings/availability?hallId=${encodeURIComponent(hallId)}`);
-    return await res.json();
+    return await parseApiJson(res, "Gagal memuat ketersediaan tanggal aula");
   } catch {
     return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
   }
@@ -324,7 +342,7 @@ export async function submitHallBooking(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return await res.json();
+    return await parseApiJson(res, "Gagal mengirim pengajuan penyewaan aula");
   } catch {
     return { ok: false, error: { message: "Tidak dapat menghubungi server" } };
   }
