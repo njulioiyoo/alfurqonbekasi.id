@@ -100,6 +100,19 @@ export function isExternalUrl(url: string): boolean {
   return /^https?:\/\//i.test(url.trim());
 }
 
+export function jadwalKajianDetailRoute(slug: string): { name: string; params: { slug: string } } {
+  return { name: "jadwal-kajian-detail", params: { slug } };
+}
+
+/** URL absolut untuk gambar/dokumen dari path `/api/uploads/...`. */
+export function publicAssetUrl(url: string): string {
+  const t = url.trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t) || t.startsWith("data:")) return t;
+  if (t.startsWith("/")) return `${window.location.origin}${t}`;
+  return t;
+}
+
 export function galleryFallbackImage(index: number, assetBase: string): string {
   const n = (index % 8) + 1;
   return `${assetBase}/images/resources/gallery-img2-${n}.jpg`;

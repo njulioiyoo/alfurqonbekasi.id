@@ -153,6 +153,10 @@ export type PublicContentItem = {
   attr5: string;
 };
 
+export type PublicContentDetailItem = PublicContentItem & {
+  body: string;
+};
+
 export type ContentStatusCounts = {
   published: number;
   draft: number;
@@ -312,6 +316,19 @@ async function parseApiJson<T extends { ok: boolean; error?: { message?: string 
     return { ok: false, error: { message: fallbackMessage } } as T;
   }
   return json;
+}
+
+export async function getPublicEventBySlug(slug: string): Promise<{
+  ok: boolean;
+  data?: PublicContentDetailItem;
+  error?: { message: string };
+}> {
+  try {
+    const res = await fetch(`${BASE}/content/event/${encodeURIComponent(slug)}`);
+    return await parseApiJson(res, "Gagal memuat detail kajian");
+  } catch (e) {
+    return { ok: false, error: { message: fetchFailureMessage(e) } };
+  }
 }
 
 export async function getPublicHalls(): Promise<{

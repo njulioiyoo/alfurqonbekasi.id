@@ -8,13 +8,18 @@ import {
   eventFallbackImage,
   eventTimeLabel,
   isExternalUrl,
+  jadwalKajianDetailRoute,
   parseEventDateParts,
 } from "../utils/event-display.js";
 import { plainTextFromHtml } from "../utils/html-text.js";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
-const EXCERPT_MAX = 200;
+const EXCERPT_MAX = 300;
+
+function truncateExcerpt(text: string): string {
+  return text.length > EXCERPT_MAX ? `${text.slice(0, EXCERPT_MAX).trimEnd()}…` : text;
+}
 
 type EventCard = PublicContentItem & {
   imageUrl: string;
@@ -38,7 +43,6 @@ const currentPage = ref(1);
 const totalItems = ref(0);
 const totalPages = ref(0);
 const listTopRef = ref<HTMLElement | null>(null);
-const expandedExcerpts = ref<Set<number>>(new Set());
 
 const showEmpty = computed(() => !loading.value && !loadError.value && totalItems.value === 0);
 const showPagination = computed(() => !loading.value && !loadError.value && totalPages.value > 1);
@@ -74,28 +78,12 @@ function mapEvent(row: PublicContentItem, globalIndex: number): EventCard {
     targetMs: parts.targetMs,
     detailUrl: link || "#",
     detailExternal: isExternalUrl(link),
-    excerptPlain: plainTextFromHtml(row.excerpt ?? ""),
+    excerptPlain: truncateExcerpt(plainTextFromHtml(row.excerpt ?? "")),
   };
 }
 
 function scrollToListTop(): void {
   listTopRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function excerptNeedsMore(text: string): boolean {
-  return text.length > EXCERPT_MAX;
-}
-
-function excerptDisplay(text: string, id: number): string {
-  if (!excerptNeedsMore(text) || expandedExcerpts.value.has(id)) return text;
-  return `${text.slice(0, EXCERPT_MAX).trimEnd()}…`;
-}
-
-function toggleExcerpt(id: number): void {
-  const next = new Set(expandedExcerpts.value);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  expandedExcerpts.value = next;
 }
 
 async function loadPage(page: number): Promise<void> {
@@ -188,47 +176,62 @@ onMounted(() => {
                   <div class="event-thmb">
                     <span>{{ ev.day }} <i>{{ ev.month }}</i></span>
                     <a
-                      :href="ev.detailExternal ? ev.detailUrl : '#'"
-                      :target="ev.detailExternal ? '_blank' : undefined"
-                      :rel="ev.detailExternal ? 'noopener noreferrer' : undefined"
+                      v-if="ev.detailExternal"
+                      :href="ev.detailUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       :title="ev.title"
                     >
                       <img :src="ev.imageUrl" :alt="ev.title" />
                     </a>
+                    <RouterLink
+                      v-else-if="ev.slug"
+                      :to="jadwalKajianDetailRoute(ev.slug)"
+                      :title="ev.title"
+                    >
+                      <img :src="ev.imageUrl" :alt="ev.title" />
+                    </RouterLink>
+                    <span v-else class="site-event-thumb-static">
+                      <img :src="ev.imageUrl" :alt="ev.title" />
+                    </span>
                   <EventCountdown v-if="ev.targetMs != null" :target-ms="ev.targetMs" />
                   </div>
                   <div class="event-inf">
                     <h5>
                       <a
-                        :href="ev.detailExternal ? ev.detailUrl : '#'"
-                        :target="ev.detailExternal ? '_blank' : undefined"
-                        :rel="ev.detailExternal ? 'noopener noreferrer' : undefined"
+                        v-if="ev.detailExternal"
+                        :href="ev.detailUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         :title="ev.title"
                       >{{ ev.title }}</a>
+                      <RouterLink
+                        v-else-if="ev.slug"
+                        :to="jadwalKajianDetailRoute(ev.slug)"
+                        :title="ev.title"
+                      >{{ ev.title }}</RouterLink>
+                      <span v-else>{{ ev.title }}</span>
                     </h5>
                     <ul class="pst-mta">
                       <li><i class="fas fa-map-marker-alt theme-clr"></i> {{ ev.location }}</li>
                       <li v-if="ev.speaker"><i class="far fa-user theme-clr"></i> {{ ev.speaker }}</li>
                       <li><i class="far fa-clock theme-clr"></i> {{ ev.timeLabel }}</li>
                     </ul>
-                    <p v-if="ev.excerptPlain" class="site-event-excerpt">
-                      {{ excerptDisplay(ev.excerptPlain, ev.id) }}
-                      <button
-                        v-if="excerptNeedsMore(ev.excerptPlain)"
-                        type="button"
-                        class="site-event-readmore"
-                        @click="toggleExcerpt(ev.id)"
-                      >
-                        {{ expandedExcerpts.has(ev.id) ? "Sembunyikan" : "Baca selengkapnya" }}
-                      </button>
-                    </p>
+                    <p v-if="ev.excerptPlain" class="site-event-excerpt">{{ ev.excerptPlain }}</p>
                     <a
                       v-if="ev.detailExternal"
                       :href="ev.detailUrl"
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Detail kegiatan"
+                      class="site-event-detail-link"
                     >Detail Kegiatan</a>
+                    <RouterLink
+                      v-else-if="ev.slug"
+                      :to="jadwalKajianDetailRoute(ev.slug)"
+                      title="Detail kegiatan"
+                      class="site-event-detail-link"
+                    >Detail Kegiatan</RouterLink>
                     <span v-else class="site-event-no-link">Detail segera hadir</span>
                   </div>
                 </div>
@@ -314,14 +317,21 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
+.site-event-detail-link {
+  display: inline-block;
+  margin-top: 12px;
+}
+
 .site-event-no-link {
+  display: inline-block;
+  margin-top: 12px;
   font-size: 0.9rem;
   color: #888;
   font-style: italic;
 }
 
 .site-event-excerpt {
-  margin: 0;
+  margin: 0 0 12px;
   line-height: 1.5;
 }
 

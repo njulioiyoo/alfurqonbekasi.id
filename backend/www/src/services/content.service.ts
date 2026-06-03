@@ -317,6 +317,25 @@ export async function listPublishedContentByTypePaginated(
   return { items: r.rows, total, page: safePage, limit: safeLimit };
 }
 
+export type PublicContentDetailRow = PublicContentRow & {
+  body: string | null;
+};
+
+export async function getPublishedContentByTypeAndSlug(
+  type: string,
+  slug: string
+): Promise<PublicContentDetailRow | null> {
+  const r = await pool.query<PublicContentDetailRow>(
+    `SELECT id, type, title, slug, excerpt, body, cover_image_url, published_at, sort_order, is_featured,
+            attr_1, attr_2, attr_3, attr_4, attr_5
+     FROM content_items
+     WHERE type = $1 AND status = 'published' AND slug = $2
+     LIMIT 1`,
+    [type, slug]
+  );
+  return r.rows[0] ?? null;
+}
+
 export type ContentStatusCounts = {
   published: number;
   draft: number;

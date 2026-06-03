@@ -14,7 +14,7 @@ import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 
 const B = "/bismillah/assets";
 const PAGE_SIZE = 6;
-const EXCERPT_MAX = 200;
+const EXCERPT_MAX = 300;
 
 type StaffCard = PublicContentItem & {
   imageUrl: string;
@@ -40,7 +40,6 @@ const currentPage = ref(1);
 const totalItems = ref(0);
 const totalPages = ref(0);
 const listTopRef = ref<HTMLElement | null>(null);
-const expandedExcerpts = ref<Set<number>>(new Set());
 
 const showEmpty = computed(() => !loading.value && !loadError.value && totalItems.value === 0);
 const showPagination = computed(() => !loading.value && !loadError.value && totalPages.value > 1);
@@ -73,7 +72,7 @@ function mapStaff(row: PublicContentItem, globalIndex: number): StaffCard {
     mainOfficer: row.attr3?.trim() || "—",
     backup: row.attr4?.trim() || "",
     contact,
-    excerptPlain: plainTextFromHtml(row.excerpt ?? ""),
+    excerptPlain: (() => { const t = plainTextFromHtml(row.excerpt ?? ""); return t.length > EXCERPT_MAX ? `${t.slice(0, EXCERPT_MAX).trimEnd()}…` : t; })(),
     roleLabel: staffRoleLabel(row.attr1 ?? "", row.attr2 ?? ""),
     contactTel: staffContactHref(contact),
     contactWa: staffWhatsappHref(contact),
@@ -84,22 +83,6 @@ function mapStaff(row: PublicContentItem, globalIndex: number): StaffCard {
 
 function scrollToListTop(): void {
   listTopRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function excerptNeedsMore(text: string): boolean {
-  return text.length > EXCERPT_MAX;
-}
-
-function excerptDisplay(text: string, id: number): string {
-  if (!excerptNeedsMore(text) || expandedExcerpts.value.has(id)) return text;
-  return `${text.slice(0, EXCERPT_MAX).trimEnd()}…`;
-}
-
-function toggleExcerpt(id: number): void {
-  const next = new Set(expandedExcerpts.value);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  expandedExcerpts.value = next;
 }
 
 async function loadPage(page: number): Promise<void> {
@@ -214,17 +197,7 @@ onMounted(() => {
                     <h5>{{ item.mainOfficer }}</h5>
                     <span>{{ item.roleLabel }}</span>
                     <p v-if="item.backup" class="site-staff-backup">Pengganti: {{ item.backup }}</p>
-                    <p v-if="item.excerptPlain" class="site-staff-excerpt">
-                      {{ excerptDisplay(item.excerptPlain, item.id) }}
-                      <button
-                        v-if="excerptNeedsMore(item.excerptPlain)"
-                        type="button"
-                        class="site-staff-readmore"
-                        @click="toggleExcerpt(item.id)"
-                      >
-                        {{ expandedExcerpts.has(item.id) ? "Sembunyikan" : "Baca selengkapnya" }}
-                      </button>
-                    </p>
+                    <p v-if="item.excerptPlain" class="site-staff-excerpt">{{ item.excerptPlain }}</p>
                   </div>
                 </div>
               </div>
@@ -354,30 +327,12 @@ onMounted(() => {
   line-height: 1.5;
 }
 
-.site-staff-readmore {
-  display: inline;
-  margin-left: 4px;
-  padding: 0;
-  border: 0;
-  background: none;
-  font-size: inherit;
-  font-weight: 600;
-  color: var(--theme-color, #c9a227);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.site-staff-readmore:hover {
-  opacity: 0.85;
-}
-
 /* Scoped menimpa template — putih saat hover hijau */
 .team-bx:hover .team-inf > h5,
 .team-bx:hover .team-inf > span,
 .team-bx:hover .team-inf .site-staff-schedule-date,
 .team-bx:hover .team-inf .site-staff-backup,
-.team-bx:hover .team-inf .site-staff-excerpt,
-.team-bx:hover .team-inf .site-staff-readmore {
+.team-bx:hover .team-inf .site-staff-excerpt {
   color: #fff;
 }
 

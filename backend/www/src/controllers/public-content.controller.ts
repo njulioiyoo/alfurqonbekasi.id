@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import {
   countContentByTypeAndStatus,
+  getPublishedContentByTypeAndSlug,
   listPublishedContentByTypePaginated,
+  type PublicContentDetailRow,
   type PublicContentRow,
 } from "../services/content.service.js";
 
@@ -23,6 +25,13 @@ function mapPublicItem(row: PublicContentRow) {
     attr3: row.attr_3 ?? "",
     attr4: row.attr_4 ?? "",
     attr5: row.attr_5 ?? "",
+  };
+}
+
+function mapPublicDetailItem(row: PublicContentDetailRow) {
+  return {
+    ...mapPublicItem(row),
+    body: row.body ?? "",
   };
 }
 
@@ -54,4 +63,41 @@ export async function getPublicContentByType(req: Request, res: Response): Promi
       statusCounts,
     },
   });
+}
+
+export async function getPublicContentByTypeAndSlug(req: Request, res: Response): Promise<void> {
+  const type = String(req.params.type ?? "").trim();
+  const slug = String(req.params.slug ?? "").trim();
+  if (!ALLOWED_TYPES.has(type)) {
+    res.status(400).json({
+      ok: false,
+      error: { code: "INVALID_TYPE", message: "Tipe konten tidak didukung" },
+    });
+    return;
+  }
+  if (!slug) {
+    res.status(400).json({
+      ok: false,
+      error: { code: "VALIDATION_ERROR", message: "Slug wajib" },
+    });
+    return;
+  }
+
+  try {
+    const row = await getPublishedContentByTypeAndSlug(type, slug);
+    if (!row) {
+      res.status(404).json({
+        ok: false,
+        error: { code: "NOT_FOUND", message: "Konten tidak ditemukan" },
+      });
+      return;
+    }
+    res.json({ ok: true, data: mapPublicDetailItem(row) });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({
+      ok: false,
+      error: { code: "INTERNAL_ERROR", message: "Terjadi kesalahan server" },
+    });
+  }
 }

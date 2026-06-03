@@ -18,6 +18,7 @@ import {
   eventTimeLabel,
   galleryFallbackImage,
   isExternalUrl,
+  jadwalKajianDetailRoute,
   parseEventDateParts,
 } from "../utils/event-display.js";
 import { imagePlaceholderDataUrl } from "../utils/image-placeholder.js";
@@ -26,6 +27,7 @@ const B = "/bismillah/assets";
 
 type HomeEvent = {
   id: string;
+  slug: string;
   title: string;
   imageUrl: string;
   location: string;
@@ -59,17 +61,22 @@ function mapHomeEvent(row: PublicContentItem, index: number): HomeEvent {
   const link = row.attr5?.trim() || "";
   return {
     id: row.id,
+    slug: row.slug,
     title: row.title,
     imageUrl: row.coverImageUrl?.trim() || eventFallbackImage(index, B),
     location: row.attr1?.trim() || "—",
     time: eventTimeLabel(row.attr3, row.attr4),
-    description: plainTextFromHtml(row.excerpt ?? ""),
+    description: truncateText(plainTextFromHtml(row.excerpt ?? ""), 300),
     day: parts.day,
     month: parts.month,
     targetMs: parts.targetMs,
     detailUrl: link,
     detailExternal: isExternalUrl(link),
   };
+}
+
+function truncateText(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }
 
 function mapHomeGallery(row: PublicContentItem, index: number): HomeGalleryItem {
@@ -556,6 +563,13 @@ onBeforeUnmount(() => {
                     rel="noopener noreferrer"
                     :title="ev.title"
                   ><SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" /></a>
+                  <RouterLink
+                    v-else-if="ev.slug"
+                    :to="jadwalKajianDetailRoute(ev.slug)"
+                    :title="ev.title"
+                  >
+                    <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" />
+                  </RouterLink>
                   <RouterLink v-else :to="{ name: 'jadwal-kajian' }" :title="ev.title">
                     <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" />
                   </RouterLink>
@@ -570,6 +584,11 @@ onBeforeUnmount(() => {
                       rel="noopener noreferrer"
                       :title="ev.title"
                     >{{ ev.title }}</a>
+                    <RouterLink
+                      v-else-if="ev.slug"
+                      :to="jadwalKajianDetailRoute(ev.slug)"
+                      :title="ev.title"
+                    >{{ ev.title }}</RouterLink>
                     <RouterLink v-else :to="{ name: 'jadwal-kajian' }" :title="ev.title">{{ ev.title }}</RouterLink>
                   </h5>
                   <ul class="pst-mta">
@@ -583,6 +602,7 @@ onBeforeUnmount(() => {
                     target="_blank"
                     rel="noopener noreferrer"
                   >Detail Kegiatan</a>
+                  <RouterLink v-else-if="ev.slug" :to="jadwalKajianDetailRoute(ev.slug)">Detail Kegiatan</RouterLink>
                   <RouterLink v-else :to="{ name: 'jadwal-kajian' }">Detail Kegiatan</RouterLink>
                 </div>
               </div>

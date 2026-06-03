@@ -71,6 +71,9 @@ export function createApp(): express.Application {
   api.post("/public/sewa-aula", (req, res, next) => {
     void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
   });
+  api.get("/public/content/:type/:slug", (req, res, next) => {
+    void publicContentController.getPublicContentByTypeAndSlug(req, res).catch(next);
+  });
   api.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);
   });
@@ -108,6 +111,9 @@ export function createApp(): express.Application {
   });
   app.post("/public/sewa-aula", (req, res, next) => {
     void publicHallRentalController.postPublicHallBooking(req, res).catch(next);
+  });
+  app.get("/public/content/:type/:slug", (req, res, next) => {
+    void publicContentController.getPublicContentByTypeAndSlug(req, res).catch(next);
   });
   app.get("/public/content/:type", (req, res, next) => {
     void publicContentController.getPublicContentByType(req, res).catch(next);

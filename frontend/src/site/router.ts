@@ -26,6 +26,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "Jadwal Kajian" },
       },
       {
+        path: "jadwal-kajian/:slug",
+        name: "jadwal-kajian-detail",
+        component: () => import("./views/JadwalKajianDetailView.vue"),
+        meta: { title: "Detail Kajian" },
+      },
+      {
         path: "jadwal-petugas",
         name: "jadwal-petugas",
         component: () => import("./views/JadwalPetugasView.vue"),
