@@ -277,6 +277,7 @@ watch(slug, () => {
                           :src="item.coverImageUrl"
                           :fallback="eventFallbackImage(0, B)"
                           :alt="item.title"
+                          placeholder-title="Poster kajian"
                         />
                       </RouterLink>
                       <div class="rcnt-inf">

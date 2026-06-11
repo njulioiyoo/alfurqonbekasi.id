@@ -562,16 +562,16 @@ onBeforeUnmount(() => {
                     target="_blank"
                     rel="noopener noreferrer"
                     :title="ev.title"
-                  ><SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" /></a>
+                  ><SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" placeholder-title="Poster kajian" /></a>
                   <RouterLink
                     v-else-if="ev.slug"
                     :to="jadwalKajianDetailRoute(ev.slug)"
                     :title="ev.title"
                   >
-                    <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" />
+                    <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" placeholder-title="Poster kajian" />
                   </RouterLink>
                   <RouterLink v-else :to="{ name: 'jadwal-kajian' }" :title="ev.title">
-                    <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" />
+                    <SiteImg :src="ev.imageUrl" :fallback="eventImageFallback(evIdx)" :alt="ev.title" placeholder-title="Poster kajian" />
                   </RouterLink>
                   <EventCountdown v-if="ev.targetMs != null" :target-ms="ev.targetMs" />
                 </div>
@@ -647,6 +647,7 @@ onBeforeUnmount(() => {
                     :src="item.imageUrl"
                     :fallback="galleryImageFallback(galIdx)"
                     :alt="item.title"
+                    placeholder-title="Foto galeri"
                   />
                 </a>
               </div>

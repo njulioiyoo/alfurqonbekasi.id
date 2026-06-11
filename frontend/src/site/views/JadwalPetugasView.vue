@@ -10,6 +10,7 @@ import {
   staffWhatsappHref,
 } from "../utils/prayer-staff-display.js";
 import { plainTextFromHtml } from "../utils/html-text.js";
+import SiteImg from "../components/SiteImg.vue";
 import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 
 const B = "/bismillah/assets";
@@ -167,7 +168,7 @@ onMounted(() => {
           <div class="team-sec remove-ext7">
             <div class="row">
               <div
-                v-for="item in staffList"
+                v-for="(item, staffIdx) in staffList"
                 :key="item.id"
                 class="col-md-4 col-sm-6 col-lg-4"
               >
@@ -175,7 +176,12 @@ onMounted(() => {
                   <div class="team-thmb brd-rd5 site-staff-thmb">
                     <span v-if="item.day !== '—'" class="site-staff-date">{{ item.day }} <i>{{ item.month }}</i></span>
                     <span class="site-staff-img-wrap">
-                      <img :src="item.imageUrl" :alt="item.mainOfficer" />
+                      <SiteImg
+                        :src="item.imageUrl"
+                        :fallback="staffFallbackImage(staffIdx, B)"
+                        :alt="item.mainOfficer"
+                        placeholder-title="Foto petugas"
+                      />
                     </span>
                   </div>
                   <div class="team-inf brd-rd5">
@@ -302,9 +308,14 @@ onMounted(() => {
   display: block;
 }
 
-.site-staff-img-wrap img {
+.site-staff-img-wrap :deep(.site-img) {
   width: 100%;
   display: block;
+}
+
+.site-staff-img-wrap :deep(.site-img--placeholder) {
+  min-height: 220px;
+  object-fit: cover;
 }
 
 .site-staff-schedule-date {

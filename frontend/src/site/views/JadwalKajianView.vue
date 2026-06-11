@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import EventCountdown from "../components/EventCountdown.vue";
+import SiteImg from "../components/SiteImg.vue";
 import SiteNotFoundPanel from "../components/SiteNotFoundPanel.vue";
 import { getPublicEvents, type PublicContentItem } from "../api.js";
 import {
@@ -168,7 +169,7 @@ onMounted(() => {
           <div class="event-sec remove-ext5">
             <div class="row">
               <div
-                v-for="ev in events"
+                v-for="(ev, evIdx) in events"
                 :key="ev.id"
                 class="col-md-4 col-sm-6 col-lg-4"
               >
@@ -182,17 +183,32 @@ onMounted(() => {
                       rel="noopener noreferrer"
                       :title="ev.title"
                     >
-                      <img :src="ev.imageUrl" :alt="ev.title" />
+                      <SiteImg
+                        :src="ev.imageUrl"
+                        :fallback="eventFallbackImage(evIdx, B)"
+                        :alt="ev.title"
+                        placeholder-title="Poster kajian"
+                      />
                     </a>
                     <RouterLink
                       v-else-if="ev.slug"
                       :to="jadwalKajianDetailRoute(ev.slug)"
                       :title="ev.title"
                     >
-                      <img :src="ev.imageUrl" :alt="ev.title" />
+                      <SiteImg
+                        :src="ev.imageUrl"
+                        :fallback="eventFallbackImage(evIdx, B)"
+                        :alt="ev.title"
+                        placeholder-title="Poster kajian"
+                      />
                     </RouterLink>
                     <span v-else class="site-event-thumb-static">
-                      <img :src="ev.imageUrl" :alt="ev.title" />
+                      <SiteImg
+                        :src="ev.imageUrl"
+                        :fallback="eventFallbackImage(evIdx, B)"
+                        :alt="ev.title"
+                        placeholder-title="Poster kajian"
+                      />
                     </span>
                   <EventCountdown v-if="ev.targetMs != null" :target-ms="ev.targetMs" />
                   </div>
