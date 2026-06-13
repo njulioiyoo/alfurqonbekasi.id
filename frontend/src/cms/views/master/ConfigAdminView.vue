@@ -193,6 +193,8 @@ function mapHallToFacility(h: {
 
 const facilities = ref<CmsFacility[]>([emptyFacility()]);
 const facilityUploading = ref<number | null>(null);
+const loadedConfigValues = ref<Record<string, string>>({});
+const loadedFacilitiesSnapshot = ref("");
 
 function facilityCoverPreview(url: string): string {
   const v = url.trim();
@@ -263,7 +265,31 @@ async function loadFacilities(): Promise<void> {
 
 async function saveFacilities(): Promise<boolean> {
   if (!canUpdateFacilities.value) return true;
-  const items = facilities.value
+  const items = facilitiesPayload();
+  const json = await syncAdminFacilities({ items });
+  if (!json.ok) {
+    toastError(json.error?.message || "Gagal menyimpan fasilitas");
+    return false;
+  }
+  if (json.data?.items) {
+    facilities.value = json.data.items.length ? json.data.items.map(mapHallToFacility) : [emptyFacility()];
+  }
+  rememberFacilitiesSnapshot();
+  return true;
+}
+
+function facilitiesPayload(): {
+  id?: string;
+  name: string;
+  slug?: string;
+  capacity: number | null;
+  description: string;
+  coverImageUrl: string;
+  amenities: string[];
+  isActive: boolean;
+  sortOrder: number;
+}[] {
+  return facilities.value
     .filter((f) => f.name.trim().length >= 2)
     .map((f, idx) => ({
       id: f.id,
@@ -276,15 +302,34 @@ async function saveFacilities(): Promise<boolean> {
       isActive: f.isActive,
       sortOrder: f.sortOrder || (idx + 1) * 10,
     }));
-  const json = await syncAdminFacilities({ items });
-  if (!json.ok) {
-    toastError(json.error?.message || "Gagal menyimpan fasilitas");
-    return false;
-  }
-  if (json.data?.items) {
-    facilities.value = json.data.items.length ? json.data.items.map(mapHallToFacility) : [emptyFacility()];
-  }
-  return true;
+}
+
+function facilitiesSnapshotFromList(list: CmsFacility[]): string {
+  return JSON.stringify(facilitiesPayloadFromList(list));
+}
+
+function facilitiesPayloadFromList(list: CmsFacility[]) {
+  return list
+    .filter((f) => f.name.trim().length >= 2)
+    .map((f, idx) => ({
+      id: f.id ?? "",
+      name: f.name.trim(),
+      slug: f.slug.trim(),
+      capacity: f.capacity && f.capacity > 0 ? f.capacity : null,
+      description: f.description.trim(),
+      coverImageUrl: f.coverImageUrl.trim(),
+      amenities: parseFacilityAmenities(f.amenitiesText),
+      isActive: f.isActive,
+      sortOrder: f.sortOrder || (idx + 1) * 10,
+    }));
+}
+
+function rememberFacilitiesSnapshot(): void {
+  loadedFacilitiesSnapshot.value = facilitiesSnapshotFromList(facilities.value);
+}
+
+function facilitiesChanged(): boolean {
+  return facilitiesSnapshotFromList(facilities.value) !== loadedFacilitiesSnapshot.value;
 }
 
 const BANNER_W = 2256;
@@ -577,6 +622,8 @@ async function loadConfig(): Promise<void> {
     }
     bannerSlides.value = parseBannerSlidesFromJson(values.homeBannersJson);
     await loadFacilities();
+    loadedConfigValues.value = formToMap();
+    rememberFacilitiesSnapshot();
   } catch {
     loadError.value = "Tidak dapat menghubungi server";
   } finally {
@@ -599,6 +646,20 @@ function formToMap(): Record<string, string> {
   }));
   out.homeBannersJson = JSON.stringify(slides.filter((s) => s.imageUrl.length > 0));
   return out;
+}
+
+function buildConfigPatch(options?: { publish?: boolean }): Record<string, string> {
+  const current = formToMap();
+  const patch: Record<string, string> = {};
+  for (const [key, val] of Object.entries(current)) {
+    if ((loadedConfigValues.value[key] ?? "") !== val) {
+      patch[key] = val;
+    }
+  }
+  if (options?.publish) {
+    patch.configPublishedAt = new Date().toISOString();
+  }
+  return patch;
 }
 
 function previewUrl(field: ImageField): string {
@@ -625,24 +686,39 @@ async function onImagePicked(field: ImageField, ev: Event): Promise<void> {
   t.value = "";
 }
 
-async function onSaveDraft(): Promise<void> {
+async function persistConfig(options: { publish: boolean }): Promise<void> {
   if (!canUpdateSetting.value) {
     toastError("Anda tidak punya izin update:Setting");
     return;
   }
   syncVisiMisiFromDom();
+  const patch = buildConfigPatch({ publish: options.publish });
+  const saveFacilitiesNow = facilitiesChanged() && canUpdateFacilities.value;
+
+  if (!saveFacilitiesNow && Object.keys(patch).length === 0) {
+    toastError("Tidak ada perubahan untuk disimpan");
+    return;
+  }
+
   saving.value = true;
-  toastLoading("Menyimpan konfigurasi…");
+  toastLoading(options.publish ? "Publish konfigurasi…" : "Menyimpan konfigurasi…");
   try {
-    const facilitiesOk = await saveFacilities();
-    if (!facilitiesOk) return;
-    const json = await putAdminConfig(formToMap());
-    if (!json.ok) {
-      toastError(json.error?.message || "Gagal menyimpan draft");
-      return;
+    if (saveFacilitiesNow) {
+      const facilitiesOk = await saveFacilities();
+      if (!facilitiesOk) return;
     }
+
+    if (Object.keys(patch).length > 0) {
+      const json = await putAdminConfig(patch);
+      if (!json.ok) {
+        toastError(json.error?.message || (options.publish ? "Gagal publish" : "Gagal menyimpan draft"));
+        return;
+      }
+      loadedConfigValues.value = { ...loadedConfigValues.value, ...patch };
+    }
+
     window.dispatchEvent(new Event("cms-config-updated"));
-    toastSuccess("Draft konfigurasi tersimpan.");
+    toastSuccess(options.publish ? "Konfigurasi dipublish." : "Draft konfigurasi tersimpan.");
   } catch {
     toastError("Tidak dapat menghubungi server");
   } finally {
@@ -650,31 +726,12 @@ async function onSaveDraft(): Promise<void> {
   }
 }
 
+async function onSaveDraft(): Promise<void> {
+  await persistConfig({ publish: false });
+}
+
 async function onPublish(): Promise<void> {
-  if (!canUpdateSetting.value) {
-    toastError("Anda tidak punya izin update:Setting");
-    return;
-  }
-  syncVisiMisiFromDom();
-  saving.value = true;
-  toastLoading("Publish konfigurasi…");
-  try {
-    const facilitiesOk = await saveFacilities();
-    if (!facilitiesOk) return;
-    const payload = formToMap();
-    payload.configPublishedAt = new Date().toISOString();
-    const json = await putAdminConfig(payload);
-    if (!json.ok) {
-      toastError(json.error?.message || "Gagal publish");
-      return;
-    }
-    window.dispatchEvent(new Event("cms-config-updated"));
-    toastSuccess("Konfigurasi dipublish.");
-  } catch {
-    toastError("Tidak dapat menghubungi server");
-  } finally {
-    saving.value = false;
-  }
+  await persistConfig({ publish: true });
 }
 
 onMounted(() => {

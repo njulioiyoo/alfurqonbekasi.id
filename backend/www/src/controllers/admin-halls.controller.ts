@@ -68,16 +68,21 @@ export async function syncHallsHandler(req: AuthedRequest, res: Response): Promi
     return;
   }
   try {
+    const existingRows = await listAllHalls();
+    const existingById = new Map(existingRows.map((row) => [row.id, row]));
     const normalized = [];
     for (let i = 0; i < parsed.data.items.length; i++) {
       const item = parsed.data.items[i]!;
       const slug = item.slug?.trim() || slugifyHallName(item.name);
       const coverUrl = item.coverImageUrl?.trim() || null;
       if (coverUrl) {
-        const coverErr = await validateEventCoverUrl(coverUrl);
-        if (coverErr) {
-          res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: coverErr } });
-          return;
+        const prevCover = item.id ? existingById.get(item.id)?.cover_image_url?.trim() || null : null;
+        if (coverUrl !== prevCover) {
+          const coverErr = await validateEventCoverUrl(coverUrl);
+          if (coverErr) {
+            res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: coverErr } });
+            return;
+          }
         }
       }
       normalized.push({
@@ -235,7 +240,8 @@ export async function patchHall(req: AuthedRequest, res: Response): Promise<void
     }
     const nextCover =
       data.coverImageUrl === undefined ? undefined : data.coverImageUrl?.trim() || null;
-    if (nextCover) {
+    const prevCover = existing.cover_image_url?.trim() || null;
+    if (nextCover && nextCover !== prevCover) {
       const coverErr = await validateEventCoverUrl(nextCover);
       if (coverErr) {
         res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: coverErr } });
