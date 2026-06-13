@@ -37,6 +37,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("./views/JadwalPetugasView.vue"),
         meta: { title: "Jadwal Petugas Ibadah" },
       },
+      {
+        path: "galeri-kegiatan",
+        name: "galeri-kegiatan",
+        component: () => import("./views/GaleriKegiatanView.vue"),
+        meta: { title: "Galeri Kegiatan" },
+      },
       { path: "kontak", name: "kontak", component: () => import("./views/ContactView.vue"), meta: { title: "Kontak" } },
       {
         path: "penyewaan-aula",

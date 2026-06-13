@@ -653,6 +653,11 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
+          <p class="site-home-gallery-more text-center">
+            <RouterLink :to="{ name: 'galeri-kegiatan' }" class="theme-btn theme-bg brd-rd5">
+              Lihat Semua Galeri
+            </RouterLink>
+          </p>
         </div>
       </div>
     </div>
@@ -720,6 +725,10 @@ onBeforeUnmount(() => {
 .site-home-status {
   padding: 24px 16px;
   color: #666;
+}
+
+.site-home-gallery-more {
+  margin-top: 24px;
 }
 
 .site-home-status p {

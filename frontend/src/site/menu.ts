@@ -26,6 +26,7 @@ export const siteMenu: MenuGroup[] = [
     children: [
       { label: "Jadwal Kajian", routeName: "jadwal-kajian", icon: "flaticon-open-book" },
       { label: "Jadwal Petugas Ibadah", routeName: "jadwal-petugas", icon: "flaticon-mosque" },
+      { label: "Galeri Kegiatan", routeName: "galeri-kegiatan", icon: "flaticon2-image-file" },
     ],
   },
   {

@@ -294,6 +294,7 @@ onMounted(async () => {
                       <li><RouterLink :to="{ name: 'home' }">Beranda</RouterLink></li>
                       <li><RouterLink :to="{ name: 'tentang-masjid' }">Tentang Masjid</RouterLink></li>
                       <li><RouterLink :to="{ name: 'jadwal-kajian' }">Jadwal Kajian</RouterLink></li>
+                      <li><RouterLink :to="{ name: 'galeri-kegiatan' }">Galeri Kegiatan</RouterLink></li>
                       <li><RouterLink :to="{ name: 'penyewaan-aula' }">Penyewaan Aula</RouterLink></li>
                       <li><RouterLink :to="{ name: 'kontak' }">Kontak</RouterLink></li>
                       <li><RouterLink :to="{ name: 'kebijakan-privasi' }">Kebijakan Privasi</RouterLink></li>
